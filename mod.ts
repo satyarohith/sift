@@ -2,15 +2,19 @@ import {
   match,
   pathToRegexp,
 } from "https://deno.land/x/path_to_regexp@v6.2.0/index.ts";
-import { json, jsx } from "./util.ts";
+import { json, jsx, validateRequest } from "./util.ts";
 
 interface ResponseCache {
   [path: string]: Response;
 }
 
+export interface PathParams {
+  [key: string]: string;
+}
+
 export type Handler = (
   request: Request,
-  params?: { [key: string]: string },
+  params?: PathParams,
 ) => Response | Promise<Response>;
 
 export interface Routes {
@@ -22,25 +26,6 @@ function serve(routes: Routes) {
   // deno-lint-ignore no-explicit-any
   addEventListener("fetch", (event: any) => {
     event.respondWith(handleRequest(event.request, routes));
-  });
-}
-
-/**
- * Static assets handler.
- *
- * All static assets are cached in memory on first request.
- * @param baseUrl The base url (mostly `import.meta.url`).
- * @param relativeDir Path to the directory where static assets are stored (defaults to `./static/`).
- */
-function serveStaticAssets(
-  baseUrl: string,
-  relativeDir: string = "./static/",
-): (request: Request) => Promise<Response> {
-  return cache((request: Request, params?: { [key: string]: string }) => {
-    const { pathname } = new URL(request.url);
-    const STATIC = new URL(relativeDir, baseUrl);
-    const url = new URL("." + pathname.substring(7), STATIC).toString();
-    return fetch(new Request(url, request));
   });
 }
 
@@ -59,7 +44,11 @@ async function handleRequest(request: Request, routes: Routes) {
       if (pathToRegexp(route).test(pathname)) {
         const getParams = match(route);
         const { params = {} } = getParams(pathname) as any;
-        response = await routes[route](request, params);
+        try {
+          response = await routes[route](request, params);
+        } catch (error) {
+          response = json({ error: error.message }, { status: 500 });
+        }
         if (!(response instanceof Response)) {
           response = jsx(response);
         }
@@ -78,11 +67,7 @@ async function handleRequest(request: Request, routes: Routes) {
 
     return response;
   } catch (error) {
-    console.error(error);
-    return new Response(JSON.stringify({ error: error.message }), {
-      status: 500,
-      headers: { "Content-Type": "application/json" },
-    });
+    return json({ error: error.message }, { status: 500 });
   }
 }
 
@@ -91,7 +76,7 @@ async function handleRequest(request: Request, routes: Routes) {
  * @param {Function} handler
  */
 function cache(handler: Handler) {
-  return async (request: Request) => {
+  return async (request: Request, params?: PathParams): Promise<Response> => {
     const { pathname } = new URL(request.url);
     if (responseCache[pathname]) {
       const response = responseCache[pathname].clone();
@@ -99,7 +84,7 @@ function cache(handler: Handler) {
       return response;
     }
 
-    let response = await handler(request);
+    let response = await handler(request, params);
     if (!(response instanceof Response)) {
       response = jsx(response);
     }
@@ -109,11 +94,38 @@ function cache(handler: Handler) {
 }
 
 function defaultNotFoundPage() {
-  return new Response("page not found", {
+  return new Response("<h1 align=center>page not found</h1>", {
     status: 404,
-    headers: { "Content-Type": "text/html" },
+    headers: { "Content-Type": "text/html; charset=utf-8" },
   });
 }
 
-export { json, jsx, serve, serveStaticAssets };
+/**
+ * This function serves a file or files inside a directory.
+ *
+ * All subsequent requests are served from in-memory cache.
+ *
+ * TODO(@satyarohith): add examples to show usage.
+ */
+function serveStatic(relativePath: string, baseUrl: string) {
+  return cache(
+    async (request: Request, params?: PathParams): Promise<Response> => {
+      let filePath = relativePath;
+      if (params && params.filename) {
+        filePath = relativePath.endsWith("/")
+          ? relativePath + params.filename
+          : relativePath + "/" + params.filename;
+      }
+      const fileUrl = new URL(filePath, baseUrl).toString();
+      const response = await fetch(new Request(fileUrl, request));
+      if (response.status == 404) {
+        return defaultNotFoundPage();
+      }
+
+      return response;
+    },
+  );
+}
+
+export { json, jsx, serve, serveStatic, validateRequest };
 export * from "https://x.lcas.dev/preact@10.5.7/mod.js";
