@@ -21,7 +21,7 @@ export interface Routes {
   [path: string]: Handler;
 }
 
-function serve(routes: Routes) {
+function serve(routes: Routes): void {
   routes = { 404: defaultNotFoundPage, ...routes };
   // deno-lint-ignore no-explicit-any
   addEventListener("fetch", (event: any) => {
@@ -30,7 +30,10 @@ function serve(routes: Routes) {
 }
 
 const responseCache: ResponseCache = {};
-async function handleRequest(request: Request, routes: Routes) {
+async function handleRequest(
+  request: Request,
+  routes: Routes,
+): Promise<Response> {
   const { search, pathname } = new URL(request.url);
   try {
     if (!responseCache["404"]) {
@@ -43,7 +46,9 @@ async function handleRequest(request: Request, routes: Routes) {
     for (const route of Object.keys(routes)) {
       if (pathToRegexp(route).test(pathname)) {
         const getParams = match(route);
-        const { params = {} } = getParams(pathname) as any;
+        const { params = {} } = getParams(pathname) as {
+          params: { [key: string]: string };
+        };
         try {
           response = await routes[route](request, params);
         } catch (error) {
@@ -107,7 +112,13 @@ function defaultNotFoundPage() {
  *
  * TODO(@satyarohith): add examples to show usage.
  */
-function serveStatic(relativePath: string, baseUrl: string) {
+function serveStatic(
+  relativePath: string,
+  config: {
+    baseUrl: string;
+    intervene?: (response: Response) => Promise<Response> | Response;
+  },
+): Handler {
   return cache(
     async (request: Request, params?: PathParams): Promise<Response> => {
       let filePath = relativePath;
@@ -116,8 +127,12 @@ function serveStatic(relativePath: string, baseUrl: string) {
           ? relativePath + params.filename
           : relativePath + "/" + params.filename;
       }
-      const fileUrl = new URL(filePath, baseUrl).toString();
-      const response = await fetch(new Request(fileUrl, request));
+      const fileUrl = new URL(filePath, config.baseUrl).toString();
+      let response = await fetch(new Request(fileUrl, request));
+      if (typeof config.intervene === "function") {
+        response = await config.intervene(response);
+      }
+
       if (response.status == 404) {
         return defaultNotFoundPage();
       }

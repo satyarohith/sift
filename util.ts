@@ -1,9 +1,16 @@
 import { render } from "https://x.lcas.dev/preact@10.5.7/ssr.js";
+import {
+  Status,
+  STATUS_TEXT,
+} from "https://deno.land/std@0.85.0/http/http_status.ts";
 
-export function json(jsobj: { [key: string]: any }, init?: ResponseInit) {
+export function json(
+  jsobj: { [key: string]: unknown },
+  init?: ResponseInit,
+): Response {
   return new Response(JSON.stringify(jsobj) + "\n", {
-    statusText: init?.statusText,
-    status: init?.status ?? 200,
+    statusText: init?.statusText ?? STATUS_TEXT.get(init?.status ?? Status.OK),
+    status: init?.status ?? Status.OK,
     headers: {
       "Content-Type": "application/json; charset=utf-8",
       ...init?.headers,
@@ -11,10 +18,10 @@ export function json(jsobj: { [key: string]: any }, init?: ResponseInit) {
   });
 }
 
-export function jsx(jsx: unknown, init?: ResponseInit) {
+export function jsx(jsx: unknown, init?: ResponseInit): Response {
   return new Response(render(jsx), {
-    statusText: init?.statusText,
-    status: init?.status ?? 200,
+    statusText: init?.statusText ?? STATUS_TEXT.get(init?.status ?? Status.OK),
+    status: init?.status ?? Status.OK,
     headers: {
       "Content-Type": "text/html; charset=utf-8",
       ...init?.headers,
@@ -41,7 +48,7 @@ export async function validateRequest(
   terms: RequestTerms,
 ): Promise<{
   error?: { message: string; status: number };
-  body?: { [key: string]: any };
+  body?: { [key: string]: unknown };
 }> {
   let body = {};
 
@@ -49,8 +56,8 @@ export async function validateRequest(
   if (!terms[request.method]) {
     return {
       error: {
-        message: `method ${request.method} is not allowed`,
-        status: 400,
+        message: `method ${request.method} is not allowed for the URL`,
+        status: Status.MethodNotAllowed,
       },
     };
   }
@@ -69,7 +76,10 @@ export async function validateRequest(
     for (const param of terms[request.method].params!) {
       if (!requestParams.includes(param)) {
         return {
-          error: { message: `param '${param}' is required`, status: 400 },
+          error: {
+            message: `param '${param}' is required to process the request`,
+            status: Status.BadRequest,
+          },
         };
       }
     }
@@ -91,7 +101,10 @@ export async function validateRequest(
     for (const header of terms[request.method].headers!) {
       if (!requestHeaderKeys.includes(header)) {
         return {
-          error: { message: `header '${header}' not available`, status: 400 },
+          error: {
+            message: `header '${header}' not available`,
+            status: Status.BadRequest,
+          },
         };
       }
     }
@@ -106,7 +119,7 @@ export async function validateRequest(
         return {
           error: {
             message: `field '${key}' is not available in the body`,
-            status: 400,
+            status: Status.BadRequest,
           },
         };
       }
