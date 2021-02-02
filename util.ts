@@ -99,7 +99,7 @@ export async function validateRequest(
     // Loop through the headers defined in the terms and check if they
     // are present in the request.
     for (const header of terms[request.method].headers!) {
-      if (!requestHeaderKeys.includes(header)) {
+      if (!requestHeaderKeys.includes(header.toLowerCase())) {
         return {
           error: {
             message: `header '${header}' not available`,
