@@ -9,7 +9,7 @@ interface ResponseCache {
 }
 
 export interface PathParams {
-  [key: string]: string;
+  [key: string]: string | string[];
 }
 
 export type Handler = (
@@ -36,8 +36,11 @@ async function handleRequest(
 ): Promise<Response> {
   const { search, pathname } = new URL(request.url);
   try {
-    if (!responseCache["404"]) {
-      responseCache["404"] = await routes[404](request);
+    if (!(responseCache["404"] instanceof Response)) {
+      let NotFoundResponse = await routes[404](request);
+      if (!(NotFoundResponse instanceof Response)) {
+        responseCache["404"] = jsx(NotFoundResponse, { status: 404 });
+      }
     }
 
     const startTime = Date.now();
@@ -123,10 +126,14 @@ function serveStatic(
     async (request: Request, params?: PathParams): Promise<Response> => {
       let filePath = relativePath;
       if (params && params.filename) {
+        if (Array.isArray(params.filename)) {
+          params.filename = params.filename.join("/");
+        }
         filePath = relativePath.endsWith("/")
           ? relativePath + params.filename
           : relativePath + "/" + params.filename;
       }
+
       const fileUrl = new URL(filePath, config.baseUrl).toString();
       let response = await fetch(new Request(fileUrl, request));
       if (typeof config.intervene === "function") {
