@@ -2,7 +2,7 @@ import {
   match,
   pathToRegexp,
 } from "https://deno.land/x/path_to_regexp@v6.2.0/index.ts";
-import { inMemoryCache } from "https://deno.land/x/httpcache@0.1.0/in_memory.ts";
+import { inMemoryCache } from "https://deno.land/x/httpcache@0.1.2/in_memory.ts";
 import render from "https://cdn.skypack.dev/preact-render-to-string@v5.1.12";
 import {
   Status,
@@ -128,8 +128,7 @@ export function serveStatic(
         return defaultNotFoundPage();
       }
 
-      // TODO: fix below after updating httpcache.
-      await cache.put(request, response.clone());
+      await cache.put(request, response);
     } else {
       response.headers.set("from-function-cache", "true");
     }
