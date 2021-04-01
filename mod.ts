@@ -61,7 +61,7 @@ async function handleRequest(
         }
       }
     } else {
-      response.headers.set("from-function-cache", "true");
+      response.headers.set("x-function-cache-hit", "true");
     }
 
     // return not found page if no handler is found.
@@ -72,7 +72,7 @@ async function handleRequest(
     // method path+params timeTaken status
     console.log(
       `${request.method} ${pathname + search} ${
-        response.headers.has("from-function-cache")
+        response.headers.has("x-function-cache-hit")
           ? String.fromCodePoint(0x26a1)
           : ""
       }${Date.now() - startTime}ms ${response.status}`,
@@ -130,8 +130,9 @@ export function serveStatic(
       }
 
       await cache.put(request, response);
+      response = (await cache.match(request)) as Response;
     } else {
-      response.headers.set("from-function-cache", "true");
+      response.headers.set("x-function-cache-hit", "true");
     }
 
     return response;
