@@ -47,11 +47,11 @@ Deno.test(
     });
     const response1 = await fetch("http://localhost:8910/static/readme.md");
     let _body = await response1.arrayBuffer();
-    assertEquals(response1.headers.get("from-function-cache"), null);
+    assertEquals(response1.headers.get("x-function-cache-hit"), null);
     const response2 = await fetch("http://localhost:8910/static/readme.md");
     _body = await response2.arrayBuffer();
     assertEquals(response2.status, 200);
-    assertEquals(response2.headers.get("from-function-cache"), "true");
+    assertEquals(response2.headers.get("x-function-cache-hit"), "true");
     stopServer();
   },
 );

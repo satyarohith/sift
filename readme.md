@@ -19,6 +19,6 @@ serve({
     const post = `Hello, you visited ${slug}!`;
     return new Response(post);
   },
-  404: () => new Response("not found")
+  404: () => new Response("not found"),
 });
 ```
