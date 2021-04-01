@@ -1,3 +1,4 @@
+/// <reference lib="dom.iterable" />
 import {
   match,
   pathToRegexp,

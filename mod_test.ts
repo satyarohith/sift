@@ -3,7 +3,7 @@ import { Status } from "https://deno.land/std@0.85.0/http/http_status.ts";
 import { startServer, stopServer } from "./test_helper.ts";
 import { json, serve, serveStatic, validateRequest } from "./mod.ts";
 
-Deno.test("serve() invokes appropriate handler", async () => {
+Deno.test("serve() invokes appropriate route handler", async () => {
   startServer(8910);
   serve({
     "/": () => new Response("hello world"),
@@ -38,20 +38,23 @@ Deno.test("serve() passes params correctly to handler", async () => {
   stopServer();
 });
 
-Deno.test("serveStatic() serves cache content after first request", async () => {
-  startServer(8910);
-  serve({
-    "/static/:filename+": serveStatic(".", { baseUrl: import.meta.url }),
-  });
-  const response1 = await fetch("http://localhost:8910/static/readme.md");
-  let _body = await response1.arrayBuffer();
-  assertEquals(response1.headers.get("from-function-cache"), null);
-  const response2 = await fetch("http://localhost:8910/static/readme.md");
-  _body = await response2.arrayBuffer();
-  assertEquals(response2.status, 200);
-  assertEquals(response2.headers.get("from-function-cache"), "true");
-  stopServer();
-});
+Deno.test(
+  "serveStatic() serves cache content after first request",
+  async () => {
+    startServer(8910);
+    serve({
+      "/static/:filename+": serveStatic(".", { baseUrl: import.meta.url }),
+    });
+    const response1 = await fetch("http://localhost:8910/static/readme.md");
+    let _body = await response1.arrayBuffer();
+    assertEquals(response1.headers.get("from-function-cache"), null);
+    const response2 = await fetch("http://localhost:8910/static/readme.md");
+    _body = await response2.arrayBuffer();
+    assertEquals(response2.status, 200);
+    assertEquals(response2.headers.get("from-function-cache"), "true");
+    stopServer();
+  },
+);
 
 Deno.test("json() response has correct content-type", () => {
   const response = json({});
