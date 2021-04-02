@@ -22,3 +22,25 @@ serve({
   404: () => new Response("not found"),
 });
 ```
+
+### `jsx()`
+
+render with `preact` to create html Response
+
+```js
+import {
+  jsx,
+  serve,
+} from "https://deno.land/x/sift@0.1.7/mod.ts";
+import { html } from "https://cdn.skypack.dev/htm@v3.0.4/preact/standalone.module.js";
+
+const App = html`
+  <div>
+    <h1>Hello world!</h1>
+  </div>
+`;
+
+serve({
+  "/": (_request: Request) => jsx(App),
+});
+```
