@@ -25,20 +25,17 @@ serve({
 
 ### `jsx()`
 
-render with `preact` to create html Response
+Render JSX components to produce Response with `text/html` content type.
 
 ```js
-import {
-  jsx,
-  serve,
-} from "https://deno.land/x/sift@0.1.7/mod.ts";
-import { html } from "https://cdn.skypack.dev/htm@v3.0.4/preact/standalone.module.js";
+import { jsx, serve } from "https://deno.land/x/sift@0.1.7/mod.ts";
+import { h } from "https://cdn.skypack.dev/preact@10.5.13";
 
-const App = html`
+const App = (
   <div>
     <h1>Hello world!</h1>
   </div>
-`;
+);
 
 serve({
   "/": (_request: Request) => jsx(App),
