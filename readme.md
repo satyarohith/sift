@@ -31,13 +31,13 @@ Render JSX components to produce Response with `text/html` content type.
 import { jsx, serve } from "https://deno.land/x/sift@0.1.7/mod.ts";
 import { h } from "https://cdn.skypack.dev/preact@10.5.13";
 
-const App = (
+const App = () => (
   <div>
-    <h1>Hello world!</h1>
+    <h1>Hello world!!!</h1>
   </div>
 );
 
 serve({
-  "/": (_request: Request) => jsx(App),
+  "/": (_request: Request) => jsx(<App />),
 });
 ```
