@@ -3,14 +3,16 @@ import {
   match,
   pathToRegexp,
 } from "https://deno.land/x/path_to_regexp@v6.2.0/index.ts";
-import { inMemoryCache } from "https://deno.land/x/httpcache@0.1.2/in_memory.ts";
-import render from "https://cdn.skypack.dev/preact-render-to-string@v5.1.12";
 import {
   Status,
   STATUS_TEXT,
 } from "https://deno.land/std@0.85.0/http/http_status.ts";
+import { inMemoryCache } from "https://deno.land/x/httpcache@0.1.2/in_memory.ts";
+import { render } from "https://x.lcas.dev/preact@10.5.12/ssr.js";
+import type { VNode } from "https://x.lcas.dev/preact@10.5.12/mod.d.ts";
+export * from "https://x.lcas.dev/preact@10.5.12/mod.js";
 
-const cache = inMemoryCache(10);
+const globalCache = inMemoryCache(20);
 
 export interface PathParams {
   [key: string]: string | string[];
@@ -25,6 +27,20 @@ export interface Routes {
   [path: string]: Handler;
 }
 
+/** serve() registers "fetch" event listener and calls the provided route
+ * handler for the route with the request information and p
+ *
+ * @example
+ * ```ts
+ * serve({
+ *  "/": (request: Request) => new Response("Hello World!"),
+ *  404: (request: Request) => new Response("not found")
+ * })
+ * ```
+ *
+ * The route handler declared for `404` will be used to serve all
+ * requests that do not have a route handler declared.
+ */
 export function serve(routes: Routes): void {
   routes = { 404: defaultNotFoundPage, ...routes };
   // deno-lint-ignore no-explicit-any
@@ -41,7 +57,7 @@ async function handleRequest(
 
   try {
     const startTime = Date.now();
-    let response = await cache.match(request);
+    let response = await globalCache.match(request);
     if (response === undefined) {
       for (const route of Object.keys(routes)) {
         if (pathToRegexp(route).test(pathname)) {
@@ -91,19 +107,34 @@ function defaultNotFoundPage() {
   });
 }
 
-/**
- * This function serves a file or files inside a directory.
+export interface ServeStaticOptions {
+  /** The base to be used for the construction of absolute URL. */
+  baseUrl: string;
+  /** A function to modify the response before it's served to the request.
+   * For example, set appropriate content-type header. */
+  intervene?: (response: Response) => Promise<Response> | Response;
+  /** Disable caching of the responses. */
+  cache?: boolean;
+}
+
+/** Serve static files hosted on the internet or relative to your source code.
  *
- * All subsequent requests are served from in-memory cache.
+ * Be default, up to 20 static assets that are less than 10MB are cached. You
+ * can disable caching by setting `cache: false` in the options object.
  *
- * TODO(@satyarohith): add examples to show usage.
+ * @example
+ * ```
+ * import { serve, serveStatic } from "https://deno.land/x/sift/mod.ts"
+ *
+ * serve({
+ *  // It is required that the path ends with `:filename+`
+ *  "/:filename+": serveStatic("public", { baseUrl: import.meta.url }),
+ * })
+ * ```
  */
 export function serveStatic(
   relativePath: string,
-  config: {
-    baseUrl: string;
-    intervene?: (response: Response) => Promise<Response> | Response;
-  },
+  { baseUrl, intervene, cache = true }: ServeStaticOptions,
 ): Handler {
   return async (request: Request, params?: PathParams): Promise<Response> => {
     let filePath = relativePath;
@@ -116,21 +147,32 @@ export function serveStatic(
         : relativePath + "/" + params.filename;
     }
 
-    const fileUrl = new URL(filePath, config.baseUrl).toString();
-    let response = await cache.match(request);
+    const fileUrl = new URL(filePath, baseUrl).toString();
+    let response;
+    if (cache === true) {
+      response = await globalCache.match(request);
+    }
 
     if (response === undefined) {
       response = await fetch(new Request(fileUrl, request));
-      if (typeof config.intervene === "function") {
-        response = await config.intervene(response);
+      if (typeof intervene === "function") {
+        response = await intervene(response);
       }
 
       if (response.status == 404) {
         return defaultNotFoundPage();
       }
 
-      await cache.put(request, response);
-      response = (await cache.match(request)) as Response;
+      // We don't want to cache if the resource size if greater than 10MB.
+      // The size is arbitrary choice.
+      const TEN_MB = 1024 * 1024 * 10;
+      if (
+        cache === true &&
+        Number(response.headers.get("content-length")) < TEN_MB
+      ) {
+        await globalCache.put(request, response);
+        response = (await globalCache.match(request)) as Response;
+      }
     } else {
       response.headers.set("x-function-cache-hit", "true");
     }
@@ -139,6 +181,18 @@ export function serveStatic(
   };
 }
 
+/** Converts an object literal to a JSON string and returns
+ * a Response with `application/json` as the `content-type`.
+ *
+ * @example
+ * ```js
+ * import { serve, json } from "https://deno.land/x/sift/mod.ts"
+ *
+ * serve({
+ *  "/": () => json({ message: "hello world"}),
+ * })
+ *```
+ *  */
 export function json(
   jsobj: { [key: string]: unknown },
   init?: ResponseInit,
@@ -153,7 +207,23 @@ export function json(
   });
 }
 
-export function jsx(jsx: unknown, init?: ResponseInit): Response {
+/** Renders JSX components to HTML and returns a Response with `text/html`
+ * as the `content-type.`
+ *
+ * @example
+ * ```jsx
+ * import { serve, jsx, h } from "https://deno.land/x/sift/mod.ts"
+ *
+ * const Greet = ({name}) => <div>Hello, {name}</div>;
+ *
+ * serve({
+ *  "/": () => jsx(<html><Greet name="Sift" /></html),
+ * })
+ * ```
+ *
+ * Make sure your file extension is either `.tsx` or `.jsx` and you've `h` imported
+ * when using this function. */
+export function jsx(jsx: VNode, init?: ResponseInit): Response {
   return new Response(render(jsx), {
     statusText: init?.statusText ?? STATUS_TEXT.get(init?.status ?? Status.OK),
     status: init?.status ?? Status.OK,
@@ -267,5 +337,3 @@ export async function validateRequest(
 
   return { body };
 }
-
-export * from "https://x.lcas.dev/preact@10.5.7/mod.js";

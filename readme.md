@@ -2,6 +2,9 @@
 
 Sift is a routing and utility library for [Deno Deploy][deploy].
 
+![ci](https://github.com/satyarohith/sift/actions/workflows/ci.yml/badge.svg)
+[![deno doc](https://doc.deno.land/badge.svg)](https://doc.deno.land/https/deno.land/x/sift/mod.ts)
+
 [deploy]: https://deno.com/deploy
 
 ## Usage
