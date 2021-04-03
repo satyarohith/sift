@@ -28,7 +28,7 @@ serve({
 Render JSX components to produce Response with `text/html` content type.
 
 ```js
-import { jsx, serve, h } from "https://deno.land/x/sift@0.1.7/mod.ts";
+import { h, jsx, serve } from "https://deno.land/x/sift@0.1.7/mod.ts";
 
 const App = () => (
   <div>
