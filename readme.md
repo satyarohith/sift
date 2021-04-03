@@ -22,3 +22,21 @@ serve({
   404: () => new Response("not found"),
 });
 ```
+
+### `jsx()`
+
+Render JSX components to produce Response with `text/html` content type.
+
+```js
+import { h, jsx, serve } from "https://deno.land/x/sift@0.1.7/mod.ts";
+
+const App = () => (
+  <div>
+    <h1>Hello world!</h1>
+  </div>
+);
+
+serve({
+  "/": (_request: Request) => jsx(<App />),
+});
+```
