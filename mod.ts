@@ -14,6 +14,8 @@ export * from "https://x.lcas.dev/preact@10.5.12/mod.js";
 
 const globalCache = inMemoryCache(20);
 
+let routes: Routes = { 404: defaultNotFoundPage };
+
 export interface PathParams {
   [key: string]: string | string[];
 }
@@ -27,8 +29,9 @@ export interface Routes {
   [path: string]: Handler;
 }
 
-/** serve() registers "fetch" event listener and calls the provided route
- * handler for the route with the request information and p
+/** serve() registers "fetch" event listener and invokes the provided route
+ * handler for the route with the request as first argument and processed path
+ * params as the second.
  *
  * @example
  * ```ts
@@ -41,8 +44,8 @@ export interface Routes {
  * The route handler declared for `404` will be used to serve all
  * requests that do not have a route handler declared.
  */
-export function serve(routes: Routes): void {
-  routes = { 404: defaultNotFoundPage, ...routes };
+export function serve(userRoutes: Routes): void {
+  routes = { ...routes, ...userRoutes };
   // deno-lint-ignore no-explicit-any
   addEventListener("fetch", (event: any) => {
     event.respondWith(handleRequest(event.request, routes));
@@ -160,7 +163,7 @@ export function serveStatic(
       }
 
       if (response.status == 404) {
-        return defaultNotFoundPage();
+        return routes[404](request);
       }
 
       // We don't want to cache if the resource size if greater than 10MB.
@@ -192,7 +195,7 @@ export function serveStatic(
  *  "/": () => json({ message: "hello world"}),
  * })
  *```
- *  */
+ * */
 export function json(
   jsobj: { [key: string]: unknown },
   init?: ResponseInit,
