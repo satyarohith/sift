@@ -68,7 +68,7 @@ serve({
     // The intervene function is called with the fetched response as an
     // argument and it should return a response as a result.
     intervene: response => {
-      response.headers.set(("content-type": "text/css; charset=utf-8"));
+      response.headers.set("content-type", "text/css; charset=utf-8");
       return response;
     }
   })
