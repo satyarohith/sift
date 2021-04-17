@@ -59,7 +59,7 @@ serve({
   // Serve files hosted on the internet.
   // The URL to the resouce would become https://yourbucket.aws.com/profile.png
   "/profile.png": serveStatic("profile.png", {
-    baseUrl: "https://yourbucket.aws.com"
+    baseUrl: "https://yourbucket.aws.com",
   }),
   // You can modify the fetched response before returning to the request
   // by using the intervene option.
@@ -69,10 +69,10 @@ serve({
     // the fetched response as the second argument and it should return a
     // response as a result.
     intervene: (request, response) => {
-      response.headers.set(("content-type": "text/css; charset=utf-8"));
+      response.headers.set("content-type", "text/css; charset=utf-8");
       return response;
-    }
-  })
+    },
+  }),
 });
 ```
 
