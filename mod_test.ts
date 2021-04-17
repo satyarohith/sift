@@ -56,6 +56,23 @@ Deno.test(
   },
 );
 
+Deno.test(
+  "serveStatic() sets the appropriate content-type",
+  async () => {
+    startServer(8910);
+    serve({
+      "/static/:filename+": serveStatic(".", { baseUrl: import.meta.url }),
+    });
+    const response = await fetch("http://localhost:8910/static/readme.md");
+    const _body = await response.arrayBuffer();
+    assertEquals(
+      response.headers.get("content-type"),
+      "text/markdown; charset=utf-8",
+    );
+    stopServer();
+  },
+);
+
 Deno.test("json() response has correct content-type", () => {
   const response = json({});
   assertEquals(
