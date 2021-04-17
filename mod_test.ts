@@ -28,7 +28,7 @@ Deno.test("serve() uses custom 404 when provided", async () => {
 Deno.test("serve() passes params correctly to handler", async () => {
   startServer(8910);
   serve({
-    "/blog/:slug?": (request, params) => {
+    "/blog/:slug?": (_request, params) => {
       return json({ params });
     },
   });
