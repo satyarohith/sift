@@ -76,6 +76,7 @@ async function handleRequest(
           try {
             response = await routes[route](request, params);
           } catch (error) {
+            console.error("Error serving request:", error);
             response = json({ error: error.message }, { status: 500 });
           }
           if (!(response instanceof Response)) {
@@ -104,6 +105,7 @@ async function handleRequest(
 
     return response;
   } catch (error) {
+    console.error("Error serving request:", error);
     return json({ error: error.message }, { status: 500 });
   }
 }
