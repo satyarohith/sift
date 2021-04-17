@@ -12,7 +12,7 @@ import { render } from "https://x.lcas.dev/preact@10.5.12/ssr.js";
 import {
   contentType,
   lookup,
-} from "https://deno.land/x/media_types@v2.8.1/mod.ts";
+} from "https://raw.githubusercontent.com/usesift/media_types/34656bf398c81f2687fa5010e56844dac4e7a2e9/mod.ts";
 import type { VNode } from "https://x.lcas.dev/preact@10.5.12/mod.d.ts";
 
 export * from "https://x.lcas.dev/preact@10.5.12/mod.js";
@@ -27,7 +27,7 @@ export interface PathParams {
 
 export type Handler = (
   request: Request,
-  params?: PathParams,
+  params: PathParams,
 ) => Response | Promise<Response>;
 
 export interface Routes {
@@ -91,7 +91,7 @@ async function handleRequest(
 
     // return not found page if no handler is found.
     if (response === undefined) {
-      response = await routes["404"](request);
+      response = await routes["404"](request, {});
     }
 
     // method path+params timeTaken status
@@ -149,7 +149,7 @@ export function serveStatic(
   relativePath: string,
   { baseUrl, intervene, cache = true }: ServeStaticOptions,
 ): Handler {
-  return async (request: Request, params?: PathParams): Promise<Response> => {
+  return async (request: Request, params: PathParams): Promise<Response> => {
     let filePath = relativePath;
     if (params && params.filename) {
       if (Array.isArray(params.filename)) {
@@ -169,10 +169,10 @@ export function serveStatic(
     if (response === undefined) {
       response = await fetch(new Request(fileUrl, request));
       if (response.status == 404) {
-        return routes[404](request);
+        return routes[404](request, {});
       }
 
-      const cType = contentType(lookup(filePath));
+      const cType = contentType(String(lookup(filePath)));
       if (cType) response.headers.set("content-type", cType);
 
       if (typeof intervene === "function") {
