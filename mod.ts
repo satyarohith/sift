@@ -9,7 +9,12 @@ import {
 } from "https://deno.land/std@0.85.0/http/http_status.ts";
 import { inMemoryCache } from "https://deno.land/x/httpcache@0.1.2/in_memory.ts";
 import { render } from "https://x.lcas.dev/preact@10.5.12/ssr.js";
+import {
+  contentType,
+  lookup,
+} from "https://deno.land/x/media_types@v2.8.1/mod.ts";
 import type { VNode } from "https://x.lcas.dev/preact@10.5.12/mod.d.ts";
+
 export * from "https://x.lcas.dev/preact@10.5.12/mod.js";
 
 const globalCache = inMemoryCache(20);
@@ -115,7 +120,10 @@ export interface ServeStaticOptions {
   baseUrl: string;
   /** A function to modify the response before it's served to the request.
    * For example, set appropriate content-type header. */
-  intervene?: (response: Response) => Promise<Response> | Response;
+  intervene?: (
+    request: Request,
+    response: Response,
+  ) => Promise<Response> | Response;
   /** Disable caching of the responses. */
   cache?: boolean;
 }
@@ -158,12 +166,15 @@ export function serveStatic(
 
     if (response === undefined) {
       response = await fetch(new Request(fileUrl, request));
-      if (typeof intervene === "function") {
-        response = await intervene(response);
-      }
-
       if (response.status == 404) {
         return routes[404](request);
+      }
+
+      const cType = contentType(lookup(filePath));
+      if (cType) response.headers.set("content-type", cType);
+
+      if (typeof intervene === "function") {
+        response = await intervene(request, response);
       }
 
       // We don't want to cache if the resource size if greater than 10MB.
