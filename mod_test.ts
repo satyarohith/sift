@@ -28,7 +28,7 @@ Deno.test("serve() uses custom 404 when provided", async () => {
 Deno.test("serve() passes params correctly to handler", async () => {
   startServer(8910);
   serve({
-    "/blog/:slug?": (request, params) => {
+    "/blog/:slug?": (_request, params) => {
       return json({ params });
     },
   });
@@ -52,6 +52,23 @@ Deno.test(
     _body = await response2.arrayBuffer();
     assertEquals(response2.status, 200);
     assertEquals(response2.headers.get("x-function-cache-hit"), "true");
+    stopServer();
+  },
+);
+
+Deno.test(
+  "serveStatic() sets the appropriate content-type",
+  async () => {
+    startServer(8910);
+    serve({
+      "/static/:filename+": serveStatic(".", { baseUrl: import.meta.url }),
+    });
+    const response = await fetch("http://localhost:8910/static/readme.md");
+    const _body = await response.arrayBuffer();
+    assertEquals(
+      response.headers.get("content-type"),
+      "text/markdown; charset=utf-8",
+    );
     stopServer();
   },
 );
