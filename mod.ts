@@ -60,7 +60,7 @@ export function serve(userRoutes: Routes): void {
 function newResponse(
   res: Response,
   headers: Record<string, string>,
-): Promise<Response> {
+): Response {
   return new Response(res.body, {
     headers: {
       ...Object.fromEntries(res.headers.entries()),
