@@ -57,6 +57,20 @@ export function serve(userRoutes: Routes): void {
   });
 }
 
+function newResponse(
+  res: Response,
+  headers: Record<string, string>,
+): Promise<Response> {
+  return new Response(res.body, {
+    headers: {
+      ...Object.fromEntries(res.headers.entries()),
+      ...headers,
+    },
+    status: res.status,
+    statusText: res.statusText,
+  });
+}
+
 async function handleRequest(
   request: Request,
   routes: Routes,
@@ -86,7 +100,9 @@ async function handleRequest(
         }
       }
     } else {
-      response.headers.set("x-function-cache-hit", "true");
+      response = newResponse(response, {
+        "x-function-cache-hit": "true",
+      });
     }
 
     // return not found page if no handler is found.
@@ -173,7 +189,9 @@ export function serveStatic(
       }
 
       const cType = contentType(String(lookup(filePath)));
-      if (cType) response.headers.set("content-type", cType);
+      if (cType) {
+        response = newResponse(response, { "content-type": cType });
+      }
 
       if (typeof intervene === "function") {
         response = await intervene(request, response);
@@ -190,7 +208,9 @@ export function serveStatic(
         response = (await globalCache.match(request)) as Response;
       }
     } else {
-      response.headers.set("x-function-cache-hit", "true");
+      response = newResponse(response, {
+        "x-function-cache-hit": "true",
+      });
     }
 
     return response;
