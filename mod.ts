@@ -58,7 +58,7 @@ export function serve(userRoutes: Routes): void {
 }
 
 async function newResponse(res: Response, headers: Record<string, string>): Promise<Response> {
-    return new Response(await res.blob(), {
+    return new Response(res.body, {
         headers: {
             ...Object.fromEntries(res.headers.entries()),
             ...headers,
