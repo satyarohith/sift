@@ -57,7 +57,7 @@ export function serve(userRoutes: Routes): void {
   });
 }
 
-async function newResponse(
+function newResponse(
   res: Response,
   headers: Record<string, string>,
 ): Promise<Response> {
@@ -100,7 +100,7 @@ async function handleRequest(
         }
       }
     } else {
-      response = await newResponse(response, {
+      response = newResponse(response, {
         "x-function-cache-hit": "true",
       });
     }
@@ -190,7 +190,7 @@ export function serveStatic(
 
       const cType = contentType(String(lookup(filePath)));
       if (cType) {
-        response = await newResponse(response, { "content-type": cType });
+        response = newResponse(response, { "content-type": cType });
       }
 
       if (typeof intervene === "function") {
@@ -208,7 +208,7 @@ export function serveStatic(
         response = (await globalCache.match(request)) as Response;
       }
     } else {
-      response = await newResponse(response, {
+      response = newResponse(response, {
         "x-function-cache-hit": "true",
       });
     }
