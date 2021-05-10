@@ -12,6 +12,14 @@ The documentation below briefly explains the common usage of the functions. You
 can visit [deno doc](https://doc.deno.land/https/deno.land/x/sift@0.3.0/mod.ts)
 site to learn more about the API.
 
+Sift imports some functions from preact which causes type conflicts when
+running using `deployctl`. You can avoid these conflicts by limiting the types
+to `ns,fetchevent`.
+
+```sh
+deployctl run --libs=ns,fetchevent script.ts
+```
+
 ### `serve()`
 
 `serve()` is the routing funciton. It accepts an object literal with path
