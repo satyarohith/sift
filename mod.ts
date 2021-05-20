@@ -61,9 +61,16 @@ function newResponse(
   res: Response,
   headers: Record<string, string>,
 ): Response {
+  const oldResponseHeaders = Object.fromEntries(res.headers.entries());
+  // GitHub provides a CSP header which embeding
+  // content. This is a bad and temperory solution
+  // until deploy has a solid static assets offering.
+  if (oldResponseHeaders["x-github-request-id"]) {
+    delete oldResponseHeaders["content-security-policy"];
+  }
   return new Response(res.body, {
     headers: {
-      ...Object.fromEntries(res.headers.entries()),
+      ...oldResponseHeaders,
       ...headers,
     },
     status: res.status,
