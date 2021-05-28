@@ -237,7 +237,8 @@ export function serveStatic(
  *```
  * */
 export function json(
-  jsobj: { [key: string]: unknown },
+  // deno-lint-ignore no-explicit-any
+  jsobj: any,
   init?: ResponseInit,
 ): Response {
   return new Response(JSON.stringify(jsobj) + "\n", {
