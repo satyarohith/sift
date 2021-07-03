@@ -1,43 +1,66 @@
 import { assertEquals } from "https://deno.land/std@0.85.0/testing/asserts.ts";
 import { Status } from "https://deno.land/std@0.85.0/http/http_status.ts";
-// import { startServer, stopServer } from "./test_helper.ts";
-// import { json, serve, serveStatic, validateRequest } from "./mod.ts";
 import { json, validateRequest } from "./mod.ts";
+import {
+  createWorker,
+  handlers,
+} from "https://deno.land/x/dectyl@0.6.2/mod.ts";
 
-// Deno.test("serve() invokes appropriate route handler", async () => {
-//   startServer(8910);
-//   serve({
-//     "/": () => new Response("hello world"),
-//   });
-//   const response = await fetch("http://localhost:8910");
-//   const body = await response.text();
-//   assertEquals(body, "hello world");
-//   stopServer();
-// });
+Deno.test("01_hello_world.ts", async () => {
+  const script = await createWorker(
+    "./examples/01_hello_world.ts",
+  );
+  await script.start();
 
-// Deno.test("serve() uses custom 404 when provided", async () => {
-//   startServer(8910);
-//   serve({
-//     404: () => new Response("custom not found page"),
-//   });
-//   const response = await fetch("http://localhost:8910/_knowhere_");
-//   const body = await response.text();
-//   assertEquals(body, "custom not found page");
-//   stopServer();
-// });
+  const [response] = await script.fetch("/");
+  assertEquals(await response.text(), "Hello World!");
 
-// Deno.test("serve() passes params correctly to handler", async () => {
-//   startServer(8910);
-//   serve({
-//     "/blog/:slug?": (_request, params) => {
-//       return json({ params });
-//     },
-//   });
-//   const response = await fetch("http://localhost:8910/blog/hello-world");
-//   const body = await response.json();
-//   assertEquals(body, { params: { slug: "hello-world" } });
-//   stopServer();
-// });
+  script.close();
+});
+
+Deno.test("02_custom_404.ts", async () => {
+  const script = await createWorker(
+    "./examples/02_custom_404.ts",
+  );
+  await script.start();
+
+  const [response] = await script.fetch("/this_route_doesnt_exist");
+  assertEquals(await response.text(), "Custom 404");
+
+  script.close();
+});
+
+Deno.test("03_route_params", async () => {
+  const script = await createWorker(
+    "./examples/03_route_params.ts",
+  );
+  await script.start();
+
+  const [response] = await script.fetch("/blog/hello-world");
+  assertEquals(await response.text(), "You visited /hello-world");
+
+  script.close();
+});
+
+Deno.test({
+  name: "04_serve_static_assets",
+  ignore: true,
+  fn: async () => {
+    const script = await createWorker(
+      "./examples/04_serve_static_assets.ts",
+      {
+        fetchHandler: handlers.fileFetchHandler,
+      },
+    );
+    await script.start();
+
+    const expected = await Deno.readTextFile("./readme.md");
+    const [response] = await script.fetch("/static/readme.md");
+    assertEquals(await response.text(), expected);
+
+    script.close();
+  },
+});
 
 // Deno.test(
 //   "serveStatic() serves cache content after first request",
