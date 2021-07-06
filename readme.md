@@ -73,11 +73,12 @@ serve({
   // by using the intervene option.
   "/style.css": serveStatic("style.css", {
     baseUrl: import.meta.url,
-    // The intervene function is called with the request as first argument and
-    // the fetched response as the second argument and it should return a
-    // response as a result.
+    // The intervene function is called after the resource is
+    // fetched from the source URL. The original request and the
+    // fetched response are passed as arguments and a response
+    // is expected from the function.
     intervene: (request, response) => {
-      response.headers.set("content-type", "text/css; charset=utf-8");
+      // Do some processing to the response.
       return response;
     },
   }),
