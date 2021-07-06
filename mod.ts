@@ -6,7 +6,7 @@ import {
 import {
   Status,
   STATUS_TEXT,
-} from "https://deno.land/std@0.85.0/http/http_status.ts";
+} from "https://deno.land/std@0.100.0/http/http_status.ts";
 import { inMemoryCache } from "https://deno.land/x/httpcache@0.1.2/in_memory.ts";
 import { render } from "https://x.lcas.dev/preact@10.5.12/ssr.js";
 import {
@@ -59,20 +59,26 @@ export function serve(userRoutes: Routes): void {
 
 function newResponse(
   res: Response,
-  headers: Record<string, string>,
+  headers: HeadersInit,
 ): Response {
-  const oldResponseHeaders = Object.fromEntries(res.headers.entries());
+  const existingHeaders = res.headers;
+  const newHeaders = headers instanceof Headers
+    ? headers
+    : new Headers(headers);
+
   // GitHub provides a CSP header which embeding
   // content. This is a bad and temperory solution
   // until deploy has a solid static assets offering.
-  if (oldResponseHeaders["x-github-request-id"]) {
-    delete oldResponseHeaders["content-security-policy"];
+  if (existingHeaders.has("x-github-request-id")) {
+    existingHeaders.delete("content-security-policy");
   }
+
+  for (const [key, value] of newHeaders) {
+    existingHeaders.set(key, value);
+  }
+
   return new Response(res.body, {
-    headers: {
-      ...oldResponseHeaders,
-      ...headers,
-    },
+    headers: existingHeaders,
     status: res.status,
     statusText: res.statusText,
   });
@@ -237,17 +243,20 @@ export function serveStatic(
  *```
  * */
 export function json(
-  // deno-lint-ignore no-explicit-any
-  jsobj: any,
+  jsobj: Parameters<typeof JSON.stringify>[0],
   init?: ResponseInit,
 ): Response {
+  const headers = init?.headers instanceof Headers
+    ? init.headers
+    : new Headers(init?.headers);
+
+  if (!headers.has("Content-Type")) {
+    headers.set("Content-Type", "application/json; charset=utf-8");
+  }
   return new Response(JSON.stringify(jsobj) + "\n", {
     statusText: init?.statusText ?? STATUS_TEXT.get(init?.status ?? Status.OK),
     status: init?.status ?? Status.OK,
-    headers: {
-      "Content-Type": "application/json; charset=utf-8",
-      ...init?.headers,
-    },
+    headers,
   });
 }
 
@@ -268,13 +277,18 @@ export function json(
  * Make sure your file extension is either `.tsx` or `.jsx` and you've `h` imported
  * when using this function. */
 export function jsx(jsx: VNode, init?: ResponseInit): Response {
+  const headers = init?.headers instanceof Headers
+    ? init.headers
+    : new Headers(init?.headers);
+
+  if (!headers.has("Content-Type")) {
+    headers.set("Content-Type", "text/html; charset=utf-8");
+  }
+
   return new Response(render(jsx), {
     statusText: init?.statusText ?? STATUS_TEXT.get(init?.status ?? Status.OK),
     status: init?.status ?? Status.OK,
-    headers: {
-      "Content-Type": "text/html; charset=utf-8",
-      ...init?.headers,
-    },
+    headers,
   });
 }
 
