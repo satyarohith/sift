@@ -1,6 +1,6 @@
 import { assertEquals } from "https://deno.land/std@0.100.0/testing/asserts.ts";
 import { Status } from "https://deno.land/std@0.100.0/http/http_status.ts";
-import { json, jsx, validateRequest } from "./mod.ts";
+import { json, jsx, validateRequest, VNode } from "./mod.ts";
 import {
   createWorker,
   handlers,
@@ -246,7 +246,7 @@ for (const { entries, headers, description } of headersInitCases) {
   });
 
   Deno.test(`HeadersInit: jsx() ${description}`, () => {
-    const vnode = {type: 'div', props: {children: null}, key: 'div'};
+    const vnode: VNode = {type: 'div', props: {children: null}, key: 'div'};
     const response = jsx(vnode, {headers});
     for (const [key, value] of entries) {
       assertEquals(response.headers.get(key), value);
