@@ -6,7 +6,7 @@ import {
 import {
   Status,
   STATUS_TEXT,
-} from "https://deno.land/std@0.85.0/http/http_status.ts";
+} from "https://deno.land/std@0.100.0/http/http_status.ts";
 import { inMemoryCache } from "https://deno.land/x/httpcache@0.1.2/in_memory.ts";
 import { render } from "https://x.lcas.dev/preact@10.5.12/ssr.js";
 import {
