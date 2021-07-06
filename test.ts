@@ -1,6 +1,6 @@
 import { assertEquals } from "https://deno.land/std@0.85.0/testing/asserts.ts";
 import { Status } from "https://deno.land/std@0.85.0/http/http_status.ts";
-import { json, validateRequest } from "./mod.ts";
+import { json, jsx, validateRequest } from "./mod.ts";
 import {
   createWorker,
   handlers,
@@ -190,3 +190,66 @@ Deno.test("validateRequest() populates body as per schema", async () => {
   assertEquals(error, undefined);
   assertEquals(body, { name: "Satya", age: 98 });
 });
+
+const headersInitCases: {
+  description: string;
+  headers: HeadersInit;
+  entries: [string, string][];
+}[] = [
+  {
+    description: "merges Headers",
+    headers: new Headers({
+      "content-type": "type/subtype",
+      "custom-header-1": "1",
+      "custom-header-2": "2",
+    }),
+    entries: [
+      ["content-type", "type/subtype"],
+      ["custom-header-1", "1"],
+      ["custom-header-2", "2"],
+    ],
+  },
+  {
+    description: "merges [string, string][]",
+    headers: [
+      ["content-type", "type/subtype"],
+      ["custom-header-1", "1"],
+      ["custom-header-2", "2"],
+    ],
+    entries: [
+      ["content-type", "type/subtype"],
+      ["custom-header-1", "1"],
+      ["custom-header-2", "2"],
+    ],
+  },
+  {
+    description: "merges Record<string, string>",
+    headers: {
+      "content-type": "type/subtype",
+      "custom-header-1": "1",
+      "custom-header-2": "2",
+    },
+    entries: [
+      ["content-type", "type/subtype"],
+      ["custom-header-1", "1"],
+      ["custom-header-2", "2"],
+    ],
+  },
+];
+
+for (const { entries, headers, description } of headersInitCases) {
+  Deno.test(`HeadersInit: json() ${description}`, () => {
+    const response = json(null, { headers });
+    for (const [key, value] of entries) {
+      assertEquals(response.headers.get(key), value);
+    }
+  });
+
+  Deno.test(`HeadersInit: jsx() ${description}`, () => {
+    const vnode = {type: 'div', props: {children: null}, key: 'div'};
+    const response = jsx(vnode, {headers});
+    for (const [key, value] of entries) {
+      assertEquals(response.headers.get(key), value);
+    }
+  });
+}
