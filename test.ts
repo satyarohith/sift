@@ -246,8 +246,8 @@ for (const { entries, headers, description } of headersInitCases) {
   });
 
   Deno.test(`HeadersInit: jsx() ${description}`, () => {
-    const vnode: VNode = {type: 'div', props: {children: null}, key: 'div'};
-    const response = jsx(vnode, {headers});
+    const vnode: VNode = { type: "div", props: { children: null }, key: "div" };
+    const response = jsx(vnode, { headers });
     for (const [key, value] of entries) {
       assertEquals(response.headers.get(key), value);
     }
