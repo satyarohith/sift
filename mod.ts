@@ -59,20 +59,26 @@ export function serve(userRoutes: Routes): void {
 
 function newResponse(
   res: Response,
-  headers: Record<string, string>,
+  headers: HeadersInit,
 ): Response {
-  const oldResponseHeaders = Object.fromEntries(res.headers.entries());
+  const existingHeaders = res.headers;
+  const newHeaders = headers instanceof Headers
+    ? headers
+    : new Headers(headers);
+
   // GitHub provides a CSP header which embeding
   // content. This is a bad and temperory solution
   // until deploy has a solid static assets offering.
-  if (oldResponseHeaders["x-github-request-id"]) {
-    delete oldResponseHeaders["content-security-policy"];
+  if (existingHeaders.has("x-github-request-id")) {
+    existingHeaders.delete("content-security-policy");
   }
+
+  for (const [key, value] of newHeaders) {
+    existingHeaders.set(key, value);
+  }
+
   return new Response(res.body, {
-    headers: {
-      ...oldResponseHeaders,
-      ...headers,
-    },
+    headers: existingHeaders,
     status: res.status,
     statusText: res.statusText,
   });
