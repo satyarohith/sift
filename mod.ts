@@ -237,17 +237,20 @@ export function serveStatic(
  *```
  * */
 export function json(
-  // deno-lint-ignore no-explicit-any
-  jsobj: any,
+  jsobj: Parameters<typeof JSON.stringify>[0],
   init?: ResponseInit,
 ): Response {
+  const headers = (init?.headers instanceof Headers)
+    ? init.headers
+    : new Headers(init?.headers);
+
+  if (!headers.has('Content-Type')) {
+    headers.set('Content-Type', 'application/json; charset=utf-8');
+  }
   return new Response(JSON.stringify(jsobj) + "\n", {
     statusText: init?.statusText ?? STATUS_TEXT.get(init?.status ?? Status.OK),
     status: init?.status ?? Status.OK,
-    headers: {
-      "Content-Type": "application/json; charset=utf-8",
-      ...init?.headers,
-    },
+    headers,
   });
 }
 
@@ -268,13 +271,18 @@ export function json(
  * Make sure your file extension is either `.tsx` or `.jsx` and you've `h` imported
  * when using this function. */
 export function jsx(jsx: VNode, init?: ResponseInit): Response {
+  const headers = (init?.headers instanceof Headers)
+    ? init.headers
+    : new Headers(init?.headers);
+
+  if (!headers.has('Content-Type')) {
+    headers.set('Content-Type', 'text/html; charset=utf-8');
+  }
+
   return new Response(render(jsx), {
     statusText: init?.statusText ?? STATUS_TEXT.get(init?.status ?? Status.OK),
     status: init?.status ?? Status.OK,
-    headers: {
-      "Content-Type": "text/html; charset=utf-8",
-      ...init?.headers,
-    },
+    headers,
   });
 }
 
