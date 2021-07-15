@@ -44,7 +44,6 @@ Deno.test("03_route_params", async () => {
 
 Deno.test({
   name: "04_serve_static_assets",
-  ignore: true,
   fn: async () => {
     const script = await createWorker(
       "./examples/04_serve_static_assets.ts",
@@ -56,46 +55,17 @@ Deno.test({
 
     const expected = await Deno.readTextFile("./readme.md");
     const [response] = await script.fetch("/static/readme.md");
-    assertEquals(await response.text(), expected);
+    const text = await response.text();
+    assertEquals(text, expected);
+    assertEquals(response.headers.get("x-function-cache-hit"), null);
+    assertEquals(
+      response.headers.get("content-type"),
+      "text/markdown; charset=utf-8",
+    );
 
     script.close();
   },
 });
-
-// Deno.test(
-//   "serveStatic() serves cache content after first request",
-//   async () => {
-//     startServer(8910);
-//     serve({
-//       "/static/:filename+": serveStatic(".", { baseUrl: import.meta.url }),
-//     });
-//     const response1 = await fetch("http://localhost:8910/static/readme.md");
-//     let _body = await response1.arrayBuffer();
-//     assertEquals(response1.headers.get("x-function-cache-hit"), null);
-//     const response2 = await fetch("http://localhost:8910/static/readme.md");
-//     _body = await response2.arrayBuffer();
-//     assertEquals(response2.status, 200);
-//     assertEquals(response2.headers.get("x-function-cache-hit"), "true");
-//     stopServer();
-//   },
-// );
-
-// Deno.test(
-//   "serveStatic() sets the appropriate content-type",
-//   async () => {
-//     startServer(8910);
-//     serve({
-//       "/static/:filename+": serveStatic(".", { baseUrl: import.meta.url }),
-//     });
-//     const response = await fetch("http://localhost:8910/static/readme.md");
-//     const _body = await response.arrayBuffer();
-//     assertEquals(
-//       response.headers.get("content-type"),
-//       "text/markdown; charset=utf-8",
-//     );
-//     stopServer();
-//   },
-// );
 
 Deno.test("json() response has correct content-type", () => {
   const response = json({});
