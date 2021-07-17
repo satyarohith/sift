@@ -10,7 +10,7 @@ import {
 import { inMemoryCache } from "https://deno.land/x/httpcache@0.1.2/in_memory.ts";
 import { render } from "https://x.lcas.dev/preact@10.5.12/ssr.js";
 import {
-  contentType,
+  contentType as getContentType,
   lookup,
 } from "https://raw.githubusercontent.com/usesift/media_types/34656bf398c81f2687fa5010e56844dac4e7a2e9/mod.ts";
 import type { VNode } from "https://x.lcas.dev/preact@10.5.12/mod.d.ts";
@@ -58,10 +58,11 @@ export function serve(userRoutes: Routes): void {
 }
 
 function newResponse(
-  res: Response,
+  response: Response,
   headers: HeadersInit,
 ): Response {
-  const existingHeaders = res.headers;
+  // Clone it to make it mutable.
+  response = new Response(response.body, response);
   const newHeaders = headers instanceof Headers
     ? headers
     : new Headers(headers);
@@ -69,19 +70,15 @@ function newResponse(
   // GitHub provides a CSP header which embeding
   // content. This is a bad and temperory solution
   // until deploy has a solid static assets offering.
-  if (existingHeaders.has("x-github-request-id")) {
-    existingHeaders.delete("content-security-policy");
+  if (response.headers.has("x-github-request-id")) {
+    response.headers.delete("content-security-policy");
   }
 
   for (const [key, value] of newHeaders) {
-    existingHeaders.set(key, value);
+    response.headers.set(key, value);
   }
 
-  return new Response(res.body, {
-    headers: existingHeaders,
-    status: res.status,
-    statusText: res.statusText,
-  });
+  return response;
 }
 
 async function handleRequest(
@@ -93,7 +90,7 @@ async function handleRequest(
   try {
     const startTime = Date.now();
     let response = await globalCache.match(request);
-    if (response === undefined) {
+    if (typeof response === "undefined") {
       for (const route of Object.keys(routes)) {
         if (pathToRegexp(route).test(pathname)) {
           const getParams = match(route);
@@ -179,6 +176,7 @@ export function serveStatic(
   { baseUrl, intervene, cache = true }: ServeStaticOptions,
 ): Handler {
   return async (request: Request, params: PathParams): Promise<Response> => {
+    // Construct URL for the request resource.
     let filePath = relativePath;
     if (params && params.filename) {
       if (Array.isArray(params.filename)) {
@@ -188,44 +186,39 @@ export function serveStatic(
         ? relativePath + params.filename
         : relativePath + "/" + params.filename;
     }
-
     const fileUrl = new URL(filePath, baseUrl).toString();
-    let response;
-    if (cache === true) {
+
+    let response: Response | undefined;
+    if (cache) {
       response = await globalCache.match(request);
     }
 
-    if (response === undefined) {
+    if (typeof response === "undefined") {
       response = await fetch(new Request(fileUrl, request));
-      if (response.status == 404) {
-        return routes[404](request, {});
-      }
+      // Clone for us to be able to modify the response.
+      response = new Response(response.body, response);
 
-      const cType = contentType(String(lookup(filePath)));
-      if (cType) {
-        response = newResponse(response, { "content-type": cType });
+      const contentType = getContentType(String(lookup(filePath)));
+      if (contentType) {
+        response.headers.set("content-type", contentType);
       }
-
       if (typeof intervene === "function") {
         response = await intervene(request, response);
       }
 
-      // We don't want to cache if the resource size if greater than 10MB.
-      // The size is arbitrary choice.
-      const TEN_MB = 1024 * 1024 * 10;
-      if (
-        cache === true &&
-        Number(response.headers.get("content-length")) < TEN_MB
-      ) {
-        await globalCache.put(request, response);
-        response = (await globalCache.match(request)) as Response;
+      if (cache) {
+        // We don't want to cache if the resource size if greater than 10MB.
+        // The size is arbitrary choice.
+        const TEN_MB = 1024 * 1024 * 10;
+        if (Number(response.headers.get("content-length")) < TEN_MB) {
+          await globalCache.put(request, response);
+        }
       }
-    } else {
-      response = newResponse(response, {
-        "x-function-cache-hit": "true",
-      });
     }
 
+    if (response.status == 404) {
+      return routes[404](request, {});
+    }
     return response;
   };
 }
