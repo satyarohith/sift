@@ -196,7 +196,7 @@ export function serveStatic(
     if (typeof response === "undefined") {
       response = await fetch(new Request(fileUrl, request));
       // Clone for us to be able to modify the response.
-      response = new Response(response.body, response);
+      response = newResponse(response, {});
 
       const contentType = getContentType(String(lookup(filePath)));
       if (contentType) {
