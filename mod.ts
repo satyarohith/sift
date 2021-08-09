@@ -151,13 +151,22 @@ export interface ServeStaticOptions {
   /** The base to be used for the construction of absolute URL. */
   baseUrl: string;
   /** A function to modify the response before it's served to the request.
-   * For example, set appropriate content-type header. */
+   * For example, set appropriate content-type header.
+   *
+   * @default undefined */
   intervene?: (
     request: Request,
     response: Response,
   ) => Promise<Response> | Response;
-  /** Disable caching of the responses. */
+  /** Disable caching of the responses.
+   *
+   * @default true */
   cache?: boolean;
+  /** Use `Deno.readFile` internally. `baseUrl` option is ignored when this
+   *  is set to `true`.
+   *
+   * @default false */
+  useReadFile?: boolean;
 }
 
 /** Serve static files hosted on the internet or relative to your source code.
@@ -177,7 +186,7 @@ export interface ServeStaticOptions {
  */
 export function serveStatic(
   relativePath: string,
-  { baseUrl, intervene, cache = true }: ServeStaticOptions,
+  { baseUrl, intervene, cache = true, useReadFile = false }: ServeStaticOptions,
 ): Handler {
   return async (request: Request, params: PathParams): Promise<Response> => {
     // Construct URL for the request resource.
@@ -198,9 +207,14 @@ export function serveStatic(
     }
 
     if (typeof response === "undefined") {
-      response = await fetch(new Request(fileUrl, request));
-      // Clone for us to be able to modify the response.
-      response = newResponse(response, {});
+      if (useReadFile) {
+        const body = await Deno.readFile(filePath);
+        response = new Response(new Blob([body]));
+      } else {
+        response = await fetch(new Request(fileUrl, request));
+        // Clone for us to be able to modify the response.
+        response = newResponse(response, {});
+      }
 
       const contentType = getContentType(String(lookup(filePath)));
       if (contentType) {
