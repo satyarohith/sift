@@ -162,11 +162,6 @@ export interface ServeStaticOptions {
    *
    * @default true */
   cache?: boolean;
-  /** Use `Deno.readFile` internally. `baseUrl` option is ignored when this
-   *  is set to `true`.
-   *
-   * @default false */
-  useReadFile?: boolean;
 }
 
 /** Serve static files hosted on the internet or relative to your source code.
@@ -186,7 +181,7 @@ export interface ServeStaticOptions {
  */
 export function serveStatic(
   relativePath: string,
-  { baseUrl, intervene, cache = true, useReadFile = false }: ServeStaticOptions,
+  { baseUrl, intervene, cache = true }: ServeStaticOptions,
 ): Handler {
   return async (request: Request, params: PathParams): Promise<Response> => {
     // Construct URL for the request resource.
@@ -199,7 +194,7 @@ export function serveStatic(
         ? relativePath + params.filename
         : relativePath + "/" + params.filename;
     }
-    const fileUrl = new URL(filePath, baseUrl).toString();
+    const fileUrl = new URL(filePath, baseUrl);
 
     let response: Response | undefined;
     if (cache) {
@@ -207,14 +202,8 @@ export function serveStatic(
     }
 
     if (typeof response === "undefined") {
-      if (useReadFile) {
-        const body = await Deno.readFile(filePath);
-        response = new Response(new Blob([body]));
-      } else {
-        response = await fetch(new Request(fileUrl, request));
-        // Clone for us to be able to modify the response.
-        response = newResponse(response, {});
-      }
+      const body = await Deno.readFile(fileUrl);
+      response = new Response(new Blob([body]));
 
       const contentType = getContentType(String(lookup(filePath)));
       if (contentType) {

@@ -8,9 +8,8 @@ serve({
   // Use Deno.readFile internally. This ignores
   // the baseUrl option and you can only serve
   // content that's hosted on your repository.
-  "/static/readme.md": serveStatic("./readme.md", {
+  "/static/readme.md": serveStatic("../readme.md", {
     baseUrl: import.meta.url,
-    useReadFile: true,
   }),
   // The path should end with `filename+` for serveStatic to
   // construct correct URL to the requested resource.
