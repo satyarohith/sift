@@ -18,6 +18,18 @@ Deno.test("01_hello_world.ts", async () => {
   script.close();
 });
 
+Deno.test("01_hello_world.tsx", async () => {
+  const script = await createWorker(
+    "./examples/01_hello_world.tsx",
+  );
+  await script.start();
+
+  const [response] = await script.fetch("/");
+  assertEquals(await response.text(), "<div><h1>Hello world!</h1></div>");
+
+  script.close();
+});
+
 Deno.test("02_custom_404.ts", async () => {
   const script = await createWorker(
     "./examples/02_custom_404.ts",
