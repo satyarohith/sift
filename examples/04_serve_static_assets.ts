@@ -3,7 +3,7 @@ import { serve, serveStatic } from "../mod.ts";
 serve({
   "/": (_request) => new Response("Hello World!"),
   "/blog/:slug": (_request, params) => {
-    return new Response(`You visited /${params.slug}`);
+    return new Response(`You visited /${params?.slug}`);
   },
   // The path should end with `filename+` for serveStatic to
   // construct correct URL to the requested resource.
