@@ -5,10 +5,6 @@
 /// <reference lib="deno.ns" />
 
 import {
-  match,
-  pathToRegexp,
-} from "https://deno.land/x/path_to_regexp@v6.2.0/index.ts";
-import {
   Status,
   STATUS_TEXT,
 } from "https://deno.land/std@0.100.0/http/http_status.ts";
@@ -27,9 +23,7 @@ const globalCache = inMemoryCache(20);
 
 let routes: Routes = { 404: defaultNotFoundPage };
 
-export interface PathParams {
-  [key: string]: string | string[];
-}
+export type PathParams = Record<string, string> | undefined;
 
 export type Handler = (
   request: Request,
@@ -77,11 +71,10 @@ async function handleRequest(
     let response = await globalCache.match(request);
     if (typeof response === "undefined") {
       for (const route of Object.keys(routes)) {
-        if (pathToRegexp(route).test(pathname)) {
-          const getParams = match(route);
-          const { params = {} } = getParams(pathname) as {
-            params: { [key: string]: string };
-          };
+        // @ts-ignore URLPattern is still not available in dom lib.
+        const pattern = new URLPattern({ pathname: route });
+        if (pattern.test({ pathname })) {
+          const params = pattern.exec({ pathname })?.pathname.groups;
           try {
             response = await routes[route](request, params);
           } catch (error) {
@@ -162,17 +155,16 @@ export function serveStatic(
   relativePath: string,
   { baseUrl, intervene, cache = true }: ServeStaticOptions,
 ): Handler {
-  return async (request: Request, params: PathParams): Promise<Response> => {
+  return async (
+    request: Request,
+    params: PathParams,
+  ): Promise<Response> => {
     // Construct URL for the request resource.
+    const filename = params?.filename;
     let filePath = relativePath;
-    if (params && params.filename) {
-      if (Array.isArray(params.filename)) {
-        params.filename = params.filename.join("/");
-      }
-      filePath = relativePath.endsWith("/")
-        ? relativePath + params.filename
-        : relativePath + "/" + params.filename;
-    }
+    filePath = relativePath.endsWith("/")
+      ? relativePath + filename
+      : relativePath + "/" + filename;
     const fileUrl = new URL(filePath, baseUrl);
 
     let response: Response | undefined;
