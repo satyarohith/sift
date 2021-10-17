@@ -14,6 +14,7 @@ import {
   lookup,
 } from "https://raw.githubusercontent.com/usesift/media_types/34656bf398c81f2687fa5010e56844dac4e7a2e9/mod.ts";
 import type { VNode } from "https://x.lcas.dev/preact@10.5.12/mod.d.ts";
+import { listenAndServe } from "https://deno.land/std@0.111.0/http/server.ts";
 
 export * from "https://x.lcas.dev/preact@10.5.12/mod.js";
 
@@ -51,10 +52,13 @@ export interface Routes {
  */
 export function serve(userRoutes: Routes): void {
   routes = { ...routes, ...userRoutes };
-  // deno-lint-ignore no-explicit-any
-  addEventListener("fetch", (event: any) => {
-    event.respondWith(handleRequest(event.request, routes));
+  listenAndServe(":8000", (req: Request) => {
+    return handleRequest(req, routes);
   });
+  const isDeploy = Deno.env.get("DENO_REGION");
+  if (!isDeploy) {
+    console.log("Listening at http://localhost:8000/");
+  }
 }
 
 function newResponse(
@@ -233,8 +237,8 @@ export function serveStatic(
  * serve({
  *  "/": () => json({ message: "hello world"}),
  * })
- *```
- * */
+ * ```
+ */
 export function json(
   jsobj: Parameters<typeof JSON.stringify>[0],
   init?: ResponseInit,

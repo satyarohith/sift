@@ -4,7 +4,7 @@ import { json, jsx, validateRequest, VNode } from "./mod.ts";
 import {
   createWorker,
   handlers,
-} from "https://deno.land/x/dectyl@0.6.2/mod.ts";
+} from "https://deno.land/x/dectyl@0.10.7/mod.ts";
 
 Deno.test("01_hello_world.ts", async () => {
   const script = await createWorker(
