@@ -61,30 +61,6 @@ export function serve(userRoutes: Routes): void {
   }
 }
 
-function newResponse(
-  response: Response,
-  headers: HeadersInit,
-): Response {
-  // Clone it to make it mutable.
-  response = new Response(response.body, response);
-  const newHeaders = headers instanceof Headers
-    ? headers
-    : new Headers(headers);
-
-  // GitHub provides a CSP header which embeding
-  // content. This is a bad and temperory solution
-  // until deploy has a solid static assets offering.
-  if (response.headers.has("x-github-request-id")) {
-    response.headers.delete("content-security-policy");
-  }
-
-  for (const [key, value] of newHeaders) {
-    response.headers.set(key, value);
-  }
-
-  return response;
-}
-
 async function handleRequest(
   request: Request,
   routes: Routes,
@@ -114,9 +90,7 @@ async function handleRequest(
         }
       }
     } else {
-      response = newResponse(response, {
-        "x-function-cache-hit": "true",
-      });
+      response.headers.set("x-function-cache-hit", "true");
     }
 
     // return not found page if no handler is found.
@@ -151,12 +125,16 @@ export interface ServeStaticOptions {
   /** The base to be used for the construction of absolute URL. */
   baseUrl: string;
   /** A function to modify the response before it's served to the request.
-   * For example, set appropriate content-type header. */
+   * For example, set appropriate content-type header.
+   *
+   * @default undefined */
   intervene?: (
     request: Request,
     response: Response,
   ) => Promise<Response> | Response;
-  /** Disable caching of the responses. */
+  /** Disable caching of the responses.
+   *
+   * @default true */
   cache?: boolean;
 }
 
@@ -190,7 +168,7 @@ export function serveStatic(
         ? relativePath + params.filename
         : relativePath + "/" + params.filename;
     }
-    const fileUrl = new URL(filePath, baseUrl).toString();
+    const fileUrl = new URL(filePath, baseUrl);
 
     let response: Response | undefined;
     if (cache) {
@@ -198,10 +176,8 @@ export function serveStatic(
     }
 
     if (typeof response === "undefined") {
-      response = await fetch(new Request(fileUrl, request));
-      // Clone for us to be able to modify the response.
-      response = newResponse(response, {});
-
+      const body = await Deno.readFile(fileUrl);
+      response = new Response(body);
       const contentType = getContentType(String(lookup(filePath)));
       if (contentType) {
         response.headers.set("content-type", contentType);
