@@ -26,5 +26,4 @@ jobs:
         run: deno lint --unstable
 
       - name: Test
-        # remove --no-check after fix.
-        run: deno test --allow-net --allow-read --no-check --unstable
+        run: deno test --allow-net --allow-read --unstable
