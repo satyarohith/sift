@@ -65,10 +65,21 @@ Deno.test({
     );
     await script.start();
 
+    // Test /static/* which serves a directory.
     const expected = await Deno.readTextFile("./readme.md");
     const [response] = await script.fetch("/static/readme.md");
     const text = await response.text();
     assertEquals(text, expected);
+    assertEquals(response.headers.get("x-function-cache-hit"), null);
+    assertEquals(
+      response.headers.get("content-type"),
+      "text/markdown; charset=utf-8",
+    );
+
+    // Test /about which serves a single file.
+    const [response2] = await script.fetch("/about");
+    const text2 = await response2.text();
+    assertEquals(text2, expected);
     assertEquals(response.headers.get("x-function-cache-hit"), null);
     assertEquals(
       response.headers.get("content-type"),

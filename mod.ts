@@ -162,9 +162,11 @@ export function serveStatic(
     // Construct URL for the request resource.
     const filename = params?.filename;
     let filePath = relativePath;
-    filePath = relativePath.endsWith("/")
-      ? relativePath + filename
-      : relativePath + "/" + filename;
+    if (filename) {
+      filePath = relativePath.endsWith("/")
+        ? relativePath + filename
+        : relativePath + "/" + filename;
+    }
     const fileUrl = new URL(filePath, baseUrl);
 
     let response: Response | undefined;
