@@ -13,7 +13,7 @@ import { render } from "https://x.lcas.dev/preact@10.5.12/ssr.js";
 import {
   contentType as getContentType,
   lookup,
-} from "https://deno.land/x/media_types@v2.10.2/mod.ts";
+} from "https://deno.land/x/media_types@v2.11.1/mod.ts";
 import type { VNode } from "https://x.lcas.dev/preact@10.5.12/mod.d.ts";
 import { listenAndServe } from "https://deno.land/std@0.111.0/http/server.ts";
 
