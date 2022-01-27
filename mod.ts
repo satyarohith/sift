@@ -78,6 +78,10 @@ async function handleRequest(
           try {
             response = await routes[route](request, params);
           } catch (error) {
+            if (error.name == "NotFound") {
+              break;
+            }
+
             console.error("Error serving request:", error);
             response = json({ error: error.message }, { status: 500 });
           }

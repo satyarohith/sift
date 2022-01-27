@@ -86,6 +86,18 @@ Deno.test({
       "text/markdown; charset=utf-8",
     );
 
+    // Test /static/missing which should serve a 404.
+    const expectedMissing = "Custom 404";
+    const [response3] = await script.fetch("/static/missing");
+    const text3 = await response3.text();
+    assertEquals(text3, expectedMissing);
+    assertEquals(response3.headers.get("x-function-cache-hit"), null);
+    assertEquals(
+      response3.headers.get("content-type"),
+      "text/plain;charset=UTF-8",
+    );
+    assertEquals(response3.status, 404);
+
     script.close();
   },
 });

@@ -14,5 +14,5 @@ serve({
   "/static/:filename+": serveStatic("../", {
     baseUrl: import.meta.url,
   }),
-  404: (_request) => new Response("Custom 404"),
+  404: (_request) => new Response("Custom 404", { status: 404 }),
 });
