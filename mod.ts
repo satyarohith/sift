@@ -49,14 +49,14 @@ export interface Routes {
  * The route handler declared for `404` will be used to serve all
  * requests that do not have a route handler declared.
  */
-export function serve(userRoutes: Routes): void {
+export function serve(userRoutes: Routes, addr = ":8000"): void {
   routes = { ...routes, ...userRoutes };
-  listenAndServe(":8000", (req: Request) => {
+  listenAndServe(addr, (req: Request) => {
     return handleRequest(req, routes);
   });
   const isDeploy = Deno.env.get("DENO_REGION");
   if (!isDeploy) {
-    console.log("Listening at http://localhost:8000/");
+    console.log(`Listening at http://localhost${addr}/`);
   }
 }
 
