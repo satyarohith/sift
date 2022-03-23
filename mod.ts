@@ -4,10 +4,17 @@
 /// <reference lib="dom.asynciterable" />
 /// <reference lib="deno.ns" />
 
+// TODO(@satyarohith): remove this after upstream is fixed.
+declare global {
+  interface AbortSignal extends EventTarget {
+    readonly reason?: unknown;
+  }
+}
+
 import {
   Status,
   STATUS_TEXT,
-} from "https://deno.land/std@0.100.0/http/http_status.ts";
+} from "https://deno.land/std@0.130.0/http/http_status.ts";
 import { inMemoryCache } from "https://deno.land/x/httpcache@0.1.2/in_memory.ts";
 import { render } from "https://x.lcas.dev/preact@10.5.12/ssr.js";
 import {
@@ -15,9 +22,16 @@ import {
   lookup,
 } from "https://deno.land/x/media_types@v2.11.1/mod.ts";
 import type { VNode } from "https://x.lcas.dev/preact@10.5.12/mod.d.ts";
-import { listenAndServe } from "https://deno.land/std@0.111.0/http/server.ts";
-
+import {
+  ConnInfo,
+  serve as stdServe,
+  ServeInit,
+} from "https://deno.land/std@0.130.0/http/server.ts";
 export * from "https://x.lcas.dev/preact@10.5.12/mod.js";
+export {
+  Status,
+  STATUS_TEXT,
+} from "https://deno.land/std@0.130.0/http/http_status.ts";
 
 const globalCache = inMemoryCache(20);
 
@@ -25,10 +39,12 @@ let routes: Routes = { 404: defaultNotFoundPage };
 
 export type PathParams = Record<string, string> | undefined;
 
+/** Note: we should aim to keep it the same as std handler. */
 export type Handler = (
   request: Request,
+  connInfo: ConnInfo,
   params: PathParams,
-) => Response | Promise<Response>;
+) => Promise<Response> | Response;
 
 export interface Routes {
   [path: string]: Handler;
@@ -49,19 +65,26 @@ export interface Routes {
  * The route handler declared for `404` will be used to serve all
  * requests that do not have a route handler declared.
  */
-export function serve(userRoutes: Routes): void {
+export function serve(userRoutes: Routes, options?: ServeInit): void {
+  if (!options) {
+    options = { port: 8000 };
+  }
   routes = { ...routes, ...userRoutes };
-  listenAndServe(":8000", (req: Request) => {
-    return handleRequest(req, routes);
-  });
+
+  stdServe((req, connInfo) => handleRequest(req, connInfo, routes), options);
   const isDeploy = Deno.env.get("DENO_REGION");
   if (!isDeploy) {
-    console.log("Listening at http://localhost:8000/");
+    console.log(
+      `Listening at http://${
+        options.hostname == "0.0.0.0" ? "localhost" : options.hostname
+      }:${options.port}/`,
+    );
   }
 }
 
 async function handleRequest(
   request: Request,
+  connInfo: ConnInfo,
   routes: Routes,
 ): Promise<Response> {
   const { search, pathname } = new URL(request.url);
@@ -76,7 +99,7 @@ async function handleRequest(
         if (pattern.test({ pathname })) {
           const params = pattern.exec({ pathname })?.pathname.groups;
           try {
-            response = await routes[route](request, params);
+            response = await routes[route](request, connInfo, params);
           } catch (error) {
             if (error.name == "NotFound") {
               break;
@@ -97,7 +120,7 @@ async function handleRequest(
 
     // return not found page if no handler is found.
     if (response === undefined) {
-      response = await routes["404"](request, {});
+      response = await routes["404"](request, connInfo, {});
     }
 
     // method path+params timeTaken status
@@ -161,6 +184,7 @@ export function serveStatic(
 ): Handler {
   return async (
     request: Request,
+    connInfo: ConnInfo,
     params: PathParams,
   ): Promise<Response> => {
     // Construct URL for the request resource.
@@ -200,7 +224,7 @@ export function serveStatic(
     }
 
     if (response.status == 404) {
-      return routes[404](request, {});
+      return routes[404](request, connInfo, {});
     }
     return response;
   };
