@@ -7,7 +7,7 @@
 import {
   Status,
   STATUS_TEXT,
-} from "https://deno.land/std@0.100.0/http/http_status.ts";
+} from "https://deno.land/std@0.130.0/http/http_status.ts";
 import { inMemoryCache } from "https://deno.land/x/httpcache@0.1.2/in_memory.ts";
 import { render } from "https://x.lcas.dev/preact@10.5.12/ssr.js";
 import {
@@ -15,7 +15,7 @@ import {
   lookup,
 } from "https://deno.land/x/media_types@v2.11.1/mod.ts";
 import type { VNode } from "https://x.lcas.dev/preact@10.5.12/mod.d.ts";
-import { listenAndServe } from "https://deno.land/std@0.111.0/http/server.ts";
+import { serve as httpServe } from "https://deno.land/std@0.130.0/http/server.ts";
 
 export * from "https://x.lcas.dev/preact@10.5.12/mod.js";
 
@@ -49,14 +49,18 @@ export interface Routes {
  * The route handler declared for `404` will be used to serve all
  * requests that do not have a route handler declared.
  */
-export function serve(userRoutes: Routes, addr = ":8000"): void {
+export function serve(userRoutes: Routes, options: Deno.ListenOptions = {
+  port: 8000,
+}): void {
   routes = { ...routes, ...userRoutes };
-  listenAndServe(addr, (req: Request) => {
+  httpServe((req: Request) => {
     return handleRequest(req, routes);
-  });
+  }, options);
   const isDeploy = Deno.env.get("DENO_REGION");
   if (!isDeploy) {
-    console.log(`Listening at http://localhost${addr}/`);
+    console.log(
+      `Listening at http://${options.hostname ?? "localhost"}:${options.port}/`,
+    );
   }
 }
 
