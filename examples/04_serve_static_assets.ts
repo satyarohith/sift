@@ -2,7 +2,7 @@ import { serve, serveStatic } from "../mod.ts";
 
 serve({
   "/": (_request) => new Response("Hello World!"),
-  "/blog/:slug": (_request, params) => {
+  "/blog/:slug": (_request, _connInfo, params) => {
     return new Response(`You visited /${params?.slug}`);
   },
   "/about": serveStatic("../readme.md", {
