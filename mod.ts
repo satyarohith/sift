@@ -4,6 +4,13 @@
 /// <reference lib="dom.asynciterable" />
 /// <reference lib="deno.ns" />
 
+// TODO(@satyarohith): remove this after upstream is fixed.
+declare global {
+  interface AbortSignal extends EventTarget {
+    readonly reason?: unknown;
+  }
+}
+
 import {
   Status,
   STATUS_TEXT,
