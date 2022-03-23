@@ -65,19 +65,17 @@ export interface Routes {
  * The route handler declared for `404` will be used to serve all
  * requests that do not have a route handler declared.
  */
-export function serve(userRoutes: Routes, options?: ServeInit): void {
-  if (!options) {
-    options = { port: 8000 };
-  }
+export function serve(
+  userRoutes: Routes,
+  options: ServeInit = { port: 8000 },
+): void {
   routes = { ...routes, ...userRoutes };
 
   stdServe((req, connInfo) => handleRequest(req, connInfo, routes), options);
   const isDeploy = Deno.env.get("DENO_REGION");
   if (!isDeploy) {
     console.log(
-      `Listening at http://${
-        options.hostname == "0.0.0.0" ? "localhost" : options.hostname
-      }:${options.port}/`,
+      `Listening at http://${options.hostname ?? "localhost"}:${options.port}/`,
     );
   }
 }
