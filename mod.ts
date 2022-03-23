@@ -25,6 +25,10 @@ import type { VNode } from "https://x.lcas.dev/preact@10.5.12/mod.d.ts";
 import { serve as httpServe } from "https://deno.land/std@0.130.0/http/server.ts";
 
 export * from "https://x.lcas.dev/preact@10.5.12/mod.js";
+export {
+  Status,
+  STATUS_TEXT,
+} from "https://deno.land/std@0.130.0/http/http_status.ts";
 
 const globalCache = inMemoryCache(20);
 
