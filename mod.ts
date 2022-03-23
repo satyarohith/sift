@@ -4,29 +4,22 @@
 /// <reference lib="dom.asynciterable" />
 /// <reference lib="deno.ns" />
 
-// TODO(@satyarohith): remove this after upstream is fixed.
-declare global {
-  interface AbortSignal extends EventTarget {
-    readonly reason?: unknown;
-  }
-}
-
 import {
   Status,
   STATUS_TEXT,
 } from "https://deno.land/std@0.130.0/http/http_status.ts";
-import { inMemoryCache } from "https://deno.land/x/httpcache@0.1.2/in_memory.ts";
-import { render } from "https://x.lcas.dev/preact@10.5.12/ssr.js";
-import {
-  contentType as getContentType,
-  lookup,
-} from "https://deno.land/x/media_types@v2.11.1/mod.ts";
-import type { VNode } from "https://x.lcas.dev/preact@10.5.12/mod.d.ts";
 import {
   ConnInfo,
   serve as stdServe,
   ServeInit,
 } from "https://deno.land/std@0.130.0/http/server.ts";
+import { inMemoryCache } from "https://deno.land/x/httpcache@0.1.2/in_memory.ts";
+import {
+  contentType as getContentType,
+  lookup,
+} from "https://deno.land/x/media_types@v2.11.1/mod.ts";
+import { render } from "https://x.lcas.dev/preact@10.5.12/ssr.js";
+import type { VNode } from "https://x.lcas.dev/preact@10.5.12/mod.d.ts";
 
 export * from "https://x.lcas.dev/preact@10.5.12/mod.js";
 export {
