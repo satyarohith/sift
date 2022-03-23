@@ -27,17 +27,14 @@ import {
   serve as stdServe,
   ServeInit,
 } from "https://deno.land/std@0.130.0/http/server.ts";
+
 export * from "https://x.lcas.dev/preact@10.5.12/mod.js";
 export {
   Status,
   STATUS_TEXT,
 } from "https://deno.land/std@0.130.0/http/http_status.ts";
-
-const globalCache = inMemoryCache(20);
-
-let routes: Routes = { 404: defaultNotFoundPage };
-
 export type PathParams = Record<string, string> | undefined;
+export type { ConnInfo } from "https://deno.land/std@0.130.0/http/server.ts";
 
 /** Note: we should aim to keep it the same as std handler. */
 export type Handler = (
@@ -49,6 +46,10 @@ export type Handler = (
 export interface Routes {
   [path: string]: Handler;
 }
+
+const globalCache = inMemoryCache(20);
+
+let routes: Routes = { 404: defaultNotFoundPage };
 
 /** serve() registers "fetch" event listener and invokes the provided route
  * handler for the route with the request as first argument and processed path
