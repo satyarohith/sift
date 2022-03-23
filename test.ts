@@ -1,5 +1,5 @@
-import { assertEquals } from "https://deno.land/std@0.100.0/testing/asserts.ts";
-import { Status } from "https://deno.land/std@0.100.0/http/http_status.ts";
+import { assertEquals } from "https://deno.land/std@0.130.0/testing/asserts.ts";
+import { Status } from "https://deno.land/std@0.130.0/http/http_status.ts";
 import { json, jsx, validateRequest, VNode } from "./mod.ts";
 import {
   createWorker,
