@@ -7,12 +7,12 @@
 import {
   Status,
   STATUS_TEXT,
-} from "https://deno.land/std@0.130.0/http/http_status.ts";
+} from "https://deno.land/std@0.126.0/http/http_status.ts";
 import {
   ConnInfo,
   serve as stdServe,
   ServeInit,
-} from "https://deno.land/std@0.130.0/http/server.ts";
+} from "https://deno.land/std@0.126.0/http/server.ts";
 import { inMemoryCache } from "https://deno.land/x/httpcache@0.1.2/in_memory.ts";
 import {
   contentType as getContentType,
@@ -25,9 +25,9 @@ export * from "https://x.lcas.dev/preact@10.5.12/mod.js";
 export {
   Status,
   STATUS_TEXT,
-} from "https://deno.land/std@0.130.0/http/http_status.ts";
+} from "https://deno.land/std@0.126.0/http/http_status.ts";
 export type PathParams = Record<string, string> | undefined;
-export type { ConnInfo } from "https://deno.land/std@0.130.0/http/server.ts";
+export type { ConnInfo } from "https://deno.land/std@0.126.0/http/server.ts";
 
 /** Note: we should aim to keep it the same as std handler. */
 export type Handler = (
