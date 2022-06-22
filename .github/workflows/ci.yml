@@ -16,9 +16,10 @@ jobs:
           persist-credentials: false
 
       - name: Install Deno
-        run: |-
-          curl -fsSL https://deno.land/x/install/install.sh | sh
-          echo "$HOME/.deno/bin" >> $GITHUB_PATH
+        uses: denoland/setup-deno@v1
+        with:
+          deno-version: v1.21.x
+
       - name: Format
         run: deno fmt --check
 
