@@ -20,6 +20,10 @@ jobs:
         with:
           deno-version: v1.21.x
 
+      - name: Install Denoflare
+        run: deno install --unstable --allow-read --allow-net --allow-env --allow-run --name denoflare --force \
+          https://raw.githubusercontent.com/skymethod/denoflare/v0.5.2/cli/cli.ts 
+
       - name: Format
         run: deno fmt --check
 

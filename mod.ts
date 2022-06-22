@@ -20,6 +20,10 @@ import {
 } from "https://deno.land/x/media_types@v2.11.1/mod.ts";
 import { render } from "https://x.lcas.dev/preact@10.5.12/ssr.js";
 import type { VNode } from "https://x.lcas.dev/preact@10.5.12/mod.d.ts";
+import type {
+  IncomingRequestCf,
+  ModuleWorkerContext,
+} from 'https://raw.githubusercontent.com/skymethod/denoflare/v0.5.2/common/cloudflare_workers_types.d.ts';
 
 export * from "https://x.lcas.dev/preact@10.5.12/mod.js";
 export {
@@ -39,6 +43,23 @@ export type Handler = (
 export interface Routes {
   [path: string]: Handler;
 }
+
+/** Request handler for Cloudflare Workers (denoflare) */
+export type WorkersHandler = (
+  request: IncomingRequestCf,
+  env: ModuleWorkerEnv,
+  ctx: ModuleWorkerContext
+) => Promise<Response> | Response;
+
+type ModuleWorkerEnv = Record<string, unknown>;
+
+export interface WorkersRoutes {
+  [path: string]: WorkersHandler;
+}
+
+export type ModuleWorkerInterface = {
+  fetch: WorkersHandler,
+};
 
 const globalCache = inMemoryCache(20);
 
@@ -65,7 +86,7 @@ export function serve(
 ): void {
   routes = { ...routes, ...userRoutes };
 
-  stdServe((req, connInfo) => handleRequest(req, connInfo, routes), options);
+  stdServe((req, connInfo) => handleRequest(routes, req, connInfo), options);
   const isDeploy = Deno.env.get("DENO_REGION");
   if (!isDeploy) {
     console.log(
@@ -74,11 +95,34 @@ export function serve(
   }
 }
 
+/** flare() works similarly as serve(), but returns a Module Worker interface
+ * for denoflare.
+ *
+ * @example
+ * ```ts
+ * export default flare({
+ *  "/": (request, env, ctx) => new Response("Hello Denoflare!"),
+ *  404: () => new Response("Not Found")
+ * })
+ * ```
+ */
+export function flare(userRoutes: WorkersRoutes): ModuleWorkerInterface {
+  const routes: typeof userRoutes = {
+    404: defaultNotFoundPage,
+    ...userRoutes,
+  };
+  return {
+    fetch: (req, env, ctx) => handleRequest(routes, req, env, ctx),
+  }
+}
+
 async function handleRequest(
-  request: Request,
-  connInfo: ConnInfo,
-  routes: Routes,
+  routes: Routes | WorkersRoutes,
+  request: Request | IncomingRequestCf,
+  connInfoOrEnv: ConnInfo | ModuleWorkerEnv,
+  context?: ModuleWorkerContext,
 ): Promise<Response> {
+  const isWorker = context !== undefined;
   const { search, pathname } = new URL(request.url);
 
   try {
@@ -89,9 +133,24 @@ async function handleRequest(
         // @ts-ignore URLPattern is still not available in dom lib.
         const pattern = new URLPattern({ pathname: route });
         if (pattern.test({ pathname })) {
-          const params = pattern.exec({ pathname })?.pathname.groups;
           try {
-            response = await routes[route](request, connInfo, params);
+            if (isWorker) {
+              const handler = routes[route] as WorkersHandler;
+              response = await handler(
+                request as IncomingRequestCf,
+                connInfoOrEnv as ModuleWorkerEnv,
+                context,
+              );
+            }
+            else { /** serve */
+              const handler = routes[route] as Handler;
+              const params = pattern.exec({ pathname })?.pathname.groups;
+              response = await handler(
+                request as IncomingRequestCf,
+                connInfoOrEnv as ConnInfo,
+                params
+              );
+            }
           } catch (error) {
             if (error.name == "NotFound") {
               break;
@@ -112,7 +171,18 @@ async function handleRequest(
 
     // return not found page if no handler is found.
     if (response === undefined) {
-      response = await routes["404"](request, connInfo, {});
+      if (isWorker) {
+        const handler = routes["404"] as WorkersHandler;
+        response = await handler(
+          request as IncomingRequestCf,
+          connInfoOrEnv as ModuleWorkerEnv,
+          context,
+        );
+      }
+      else { /** serve */
+        const handler = routes["404"] as Handler;
+        response = await handler( request as Request, connInfoOrEnv as ConnInfo, {});
+      }
     }
 
     // method path+params timeTaken status

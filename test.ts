@@ -1,5 +1,6 @@
-import { assertEquals } from "https://deno.land/std@0.130.0/testing/asserts.ts";
+import { assert, assertEquals } from "https://deno.land/std@0.130.0/testing/asserts.ts";
 import { Status } from "https://deno.land/std@0.130.0/http/http_status.ts";
+import { readLines } from "https://deno.land/std@0.130.0/io/mod.ts";
 import { json, jsx, validateRequest, VNode } from "./mod.ts";
 import {
   createWorker,
@@ -100,6 +101,36 @@ Deno.test({
 
     script.close();
   },
+});
+
+Deno.test("05 denoflare", async () => {
+  const process = Deno.run({
+    cmd: ["denoflare", "serve", "./examples/05_denoflare.ts"],
+    stderr: "null",
+    stdout: "piped",
+  });
+
+  const checkResponse = async (url: string, text: string) => {
+    const response = await fetch(url);
+    assertEquals(await response.text(), text);
+  }
+
+  for await (const line of readLines(process.stdout)) {
+    const matched = line.match(/http:\/\/localhost:\d+/);
+
+    if (matched) {
+      const host = matched[0];
+      assert(host);
+
+      await checkResponse(host, "Hello World!");
+      await checkResponse(host + "/not_exist", "Not Found");
+
+      break;
+    }
+  }
+
+  process.stdout.close();
+  process.close();
 });
 
 Deno.test("json() response has correct content-type", () => {
