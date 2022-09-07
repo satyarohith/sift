@@ -7,27 +7,34 @@
 import {
   Status,
   STATUS_TEXT,
-} from "https://deno.land/std@0.130.0/http/http_status.ts";
+} from "https://deno.land/std@0.154.0/http/http_status.ts";
+
 import {
   ConnInfo,
   serve as stdServe,
   ServeInit,
-} from "https://deno.land/std@0.130.0/http/server.ts";
+} from "https://deno.land/std@0.154.0/http/server.ts";
+
 import { inMemoryCache } from "https://deno.land/x/httpcache@0.1.2/in_memory.ts";
+
 import {
   contentType as getContentType,
   lookup,
 } from "https://deno.land/x/media_types@v2.11.1/mod.ts";
-import { render } from "https://x.lcas.dev/preact@10.5.12/ssr.js";
-import type { VNode } from "https://x.lcas.dev/preact@10.5.12/mod.d.ts";
 
-export * from "https://x.lcas.dev/preact@10.5.12/mod.js";
+export { renderToString } from "https://esm.sh/preact-render-to-string@5.2.1?target=deno";
+
+import { render, type VNode, type Component } from "https://esm.sh/preact@10.10.6?target=deno";
+export * from "https://esm.sh/preact@10.10.6?target=deno";
+
 export {
   Status,
   STATUS_TEXT,
-} from "https://deno.land/std@0.130.0/http/http_status.ts";
+} from "https://deno.land/std@0.154.0/http/http_status.ts";
+
 export type PathParams = Record<string, string> | undefined;
-export type { ConnInfo } from "https://deno.land/std@0.130.0/http/server.ts";
+
+export type { ConnInfo } from "https://deno.land/std@0.154.0/http/server.ts";
 
 /** Note: we should aim to keep it the same as std handler. */
 export type Handler = (
