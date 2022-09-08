@@ -18,10 +18,10 @@ import {
   contentType as getContentType,
   lookup,
 } from "https://deno.land/x/media_types@v2.11.1/mod.ts";
-import { render } from "https://x.lcas.dev/preact@10.5.12/ssr.js";
-import type { VNode } from "https://x.lcas.dev/preact@10.5.12/mod.d.ts";
+import { render } from "https://esm.sh/preact-render-to-string@5.2.3";
+import type { VNode } from "https://esm.sh/preact@10.10.6";
 
-export * from "https://x.lcas.dev/preact@10.5.12/mod.js";
+export * from "https://esm.sh/preact@10.10.6";
 export {
   Status,
   STATUS_TEXT,
