@@ -4,12 +4,12 @@ Sift is a routing and utility library for Deno and
 [Deno Deploy](https://deno.com/deploy).
 
 ![ci](https://github.com/satyarohith/sift/actions/workflows/ci.yml/badge.svg)
-[![deno doc](https://doc.deno.land/badge.svg)](https://doc.deno.land/https/deno.land/x/sift@0.5.0/mod.ts)
+[![deno doc](https://doc.deno.land/badge.svg)](https://doc.deno.land/https/deno.land/x/sift@0.6.0/mod.ts)
 
 ## Usage
 
 The documentation below briefly explains the common usage of the functions. You
-can visit [deno doc](https://doc.deno.land/https/deno.land/x/sift@0.5.0/mod.ts)
+can visit [deno doc](https://doc.deno.land/https/deno.land/x/sift@0.6.0/mod.ts)
 site to learn more about the API.
 
 ```sh
@@ -26,7 +26,7 @@ when the requested path matches the provided pattern, the corresponding handler
 is invoked.
 
 ```js
-import { serve } from "https://deno.land/x/sift@0.5.0/mod.ts";
+import { serve } from "https://deno.land/x/sift@0.6.0/mod.ts";
 
 serve({
   "/": () => new Response("hello world"),
@@ -54,7 +54,7 @@ If you're serving a directory, it is required that the path string end with
 requested resource.
 
 ```js
-import { serve, serveStatic } from "https://deno.land/x/sift@0.5.0/mod.ts";
+import { serve, serveStatic } from "https://deno.land/x/sift@0.6.0/mod.ts";
 
 serve({
   // You can serve a single file.
@@ -83,7 +83,7 @@ Converts an object literal to a JSON string and creates a `Response` instance
 with `application/json` as the `content-type`.
 
 ```js
-import { json, serve } from "https://deno.land/x/sift@0.5.0/mod.ts";
+import { json, serve } from "https://deno.land/x/sift@0.6.0/mod.ts";
 
 serve({
   "/": () => json({ message: "hello world" }),
@@ -102,7 +102,7 @@ imported.
 
 ```jsx
 /** @jsx h */
-import { h, jsx, serve } from "https://deno.land/x/sift@0.5.0/mod.ts";
+import { h, jsx, serve } from "https://deno.land/x/sift@0.6.0/mod.ts";
 
 const App = () => (
   <div>
