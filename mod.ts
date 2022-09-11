@@ -21,10 +21,8 @@ import {
   contentType as getContentType,
   lookup,
 } from "https://deno.land/x/media_types@v2.11.1/mod.ts";
-
-export { renderToString } from "https://esm.sh/preact-render-to-string@5.2.1?target=deno";
-
-import { render, type VNode, type Component } from "https://esm.sh/preact@10.10.6?target=deno";
+import { renderToString } from "https://esm.sh/preact-render-to-string@5.2.4?target=deno";
+import { type VNode } from "https://esm.sh/preact@10.10.6?target=deno";
 export * from "https://esm.sh/preact@10.10.6?target=deno";
 
 export {
@@ -71,14 +69,7 @@ export function serve(
   options: ServeInit = { port: 8000 },
 ): void {
   routes = { ...routes, ...userRoutes };
-
   stdServe((req, connInfo) => handleRequest(req, connInfo, routes), options);
-  const isDeploy = Deno.env.get("DENO_REGION");
-  if (!isDeploy) {
-    console.log(
-      `Listening at http://${options.hostname ?? "localhost"}:${options.port}/`,
-    );
-  }
 }
 
 async function handleRequest(
@@ -252,8 +243,10 @@ export function json(
   if (!headers.has("Content-Type")) {
     headers.set("Content-Type", "application/json; charset=utf-8");
   }
+  const statusText = init?.statusText ??
+    STATUS_TEXT[(init?.status as Status) ?? Status.OK];
   return new Response(JSON.stringify(jsobj) + "\n", {
-    statusText: init?.statusText ?? STATUS_TEXT.get(init?.status ?? Status.OK),
+    statusText,
     status: init?.status ?? Status.OK,
     headers,
   });
@@ -283,9 +276,10 @@ export function jsx(jsx: VNode, init?: ResponseInit): Response {
   if (!headers.has("Content-Type")) {
     headers.set("Content-Type", "text/html; charset=utf-8");
   }
-
-  return new Response(render(jsx), {
-    statusText: init?.statusText ?? STATUS_TEXT.get(init?.status ?? Status.OK),
+  const statusText = init?.statusText ??
+    STATUS_TEXT[(init?.status as Status) ?? Status.OK];
+  return new Response(renderToString(jsx), {
+    statusText,
     status: init?.status ?? Status.OK,
     headers,
   });
