@@ -7,27 +7,32 @@
 import {
   Status,
   STATUS_TEXT,
-} from "https://deno.land/std@0.130.0/http/http_status.ts";
+} from "https://deno.land/std@0.154.0/http/http_status.ts";
+
 import {
   ConnInfo,
   serve as stdServe,
   ServeInit,
-} from "https://deno.land/std@0.130.0/http/server.ts";
+} from "https://deno.land/std@0.154.0/http/server.ts";
+
 import { inMemoryCache } from "https://deno.land/x/httpcache@0.1.2/in_memory.ts";
+
 import {
   contentType as getContentType,
   lookup,
 } from "https://deno.land/x/media_types@v2.11.1/mod.ts";
-import { render } from "https://x.lcas.dev/preact@10.5.12/ssr.js";
-import type { VNode } from "https://x.lcas.dev/preact@10.5.12/mod.d.ts";
+import { renderToString } from "https://esm.sh/preact-render-to-string@5.2.4?target=deno";
+import { type VNode } from "https://esm.sh/preact@10.10.6?target=deno";
+export * from "https://esm.sh/preact@10.10.6?target=deno";
 
-export * from "https://x.lcas.dev/preact@10.5.12/mod.js";
 export {
   Status,
   STATUS_TEXT,
-} from "https://deno.land/std@0.130.0/http/http_status.ts";
+} from "https://deno.land/std@0.154.0/http/http_status.ts";
+
 export type PathParams = Record<string, string> | undefined;
-export type { ConnInfo } from "https://deno.land/std@0.130.0/http/server.ts";
+
+export type { ConnInfo } from "https://deno.land/std@0.154.0/http/server.ts";
 
 /** Note: we should aim to keep it the same as std handler. */
 export type Handler = (
@@ -64,14 +69,7 @@ export function serve(
   options: ServeInit = { port: 8000 },
 ): void {
   routes = { ...routes, ...userRoutes };
-
   stdServe((req, connInfo) => handleRequest(req, connInfo, routes), options);
-  const isDeploy = Deno.env.get("DENO_REGION");
-  if (!isDeploy) {
-    console.log(
-      `Listening at http://${options.hostname ?? "localhost"}:${options.port}/`,
-    );
-  }
 }
 
 async function handleRequest(
@@ -245,8 +243,10 @@ export function json(
   if (!headers.has("Content-Type")) {
     headers.set("Content-Type", "application/json; charset=utf-8");
   }
+  const statusText = init?.statusText ??
+    STATUS_TEXT[(init?.status as Status) ?? Status.OK];
   return new Response(JSON.stringify(jsobj) + "\n", {
-    statusText: init?.statusText ?? STATUS_TEXT.get(init?.status ?? Status.OK),
+    statusText,
     status: init?.status ?? Status.OK,
     headers,
   });
@@ -276,9 +276,10 @@ export function jsx(jsx: VNode, init?: ResponseInit): Response {
   if (!headers.has("Content-Type")) {
     headers.set("Content-Type", "text/html; charset=utf-8");
   }
-
-  return new Response(render(jsx), {
-    statusText: init?.statusText ?? STATUS_TEXT.get(init?.status ?? Status.OK),
+  const statusText = init?.statusText ??
+    STATUS_TEXT[(init?.status as Status) ?? Status.OK];
+  return new Response(renderToString(jsx), {
+    statusText,
     status: init?.status ?? Status.OK,
     headers,
   });
