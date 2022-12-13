@@ -22,8 +22,8 @@ import {
   lookup,
 } from "https://deno.land/x/media_types@v2.11.1/mod.ts";
 import { renderToString } from "https://esm.sh/preact-render-to-string@5.2.4?target=deno";
-import { type VNode } from "https://esm.sh/preact@10.10.6?target=deno";
-export * from "https://esm.sh/preact@10.10.6?target=deno";
+import { type VNode } from "https://esm.sh/preact@10.11.3?target=deno";
+export * from "https://esm.sh/preact@10.11.3?target=deno";
 
 export {
   Status,
