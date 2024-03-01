@@ -30,7 +30,7 @@ export {
   STATUS_TEXT,
 } from "https://deno.land/std@0.154.0/http/http_status.ts";
 
-export type PathParams = Record<string, string> | undefined;
+export type PathParams = Record<string, string | undefined> | undefined;
 
 export type { ConnInfo } from "https://deno.land/std@0.154.0/http/server.ts";
 
