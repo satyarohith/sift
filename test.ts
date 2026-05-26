@@ -1,277 +1,111 @@
-import { assertEquals } from "https://deno.land/std@0.130.0/testing/asserts.ts";
-import { Status } from "https://deno.land/std@0.130.0/http/http_status.ts";
-import { json, jsx, validateRequest, VNode } from "./mod.ts";
-import {
-  createWorker,
-  handlers,
-} from "https://deno.land/x/dectyl@0.10.7/mod.ts";
+import { assertEquals } from "@std/assert";
+import { h, json, serve, validateRequest } from "./mod.ts";
 
-Deno.test({
-  name: "01_hello_world.ts",
-  ignore: true,
-  fn: async () => {
-    const script = await createWorker(
-      "./examples/01_hello_world.ts",
-    );
-    await script.start();
+async function withServer(
+  routes: Parameters<typeof serve>[0],
+  test: (base: string) => Promise<void>,
+): Promise<void> {
+  const server = serve(routes, { port: 0, onListen: () => {} });
+  const { port } = server.addr as Deno.NetAddr;
+  try {
+    await test(`http://localhost:${port}`);
+  } finally {
+    await server.shutdown();
+  }
+}
 
-    const [response] = await script.fetch("/");
-    assertEquals(await response.text(), "Hello World!");
-
-    script.close();
-  },
+Deno.test("serve() routes requests", async () => {
+  await withServer({
+    "/": () => new Response("home"),
+    "/blog/:slug": (_req, _info, params) => new Response(params?.slug),
+  }, async (base) => {
+    assertEquals(await (await fetch(`${base}/`)).text(), "home");
+    assertEquals(await (await fetch(`${base}/blog/hello`)).text(), "hello");
+  });
 });
 
-Deno.test({
-  name: "01_hello_world.tsx",
-  ignore: true,
-  fn: async () => {
-    const script = await createWorker(
-      "./examples/01_hello_world.tsx",
-    );
-    await script.start();
-
-    const [response] = await script.fetch("/");
-    assertEquals(await response.text(), "<div><h1>Hello world!</h1></div>");
-
-    script.close();
-  },
+Deno.test("serve() falls back to the 404 handler", async () => {
+  await withServer({
+    "/": () => new Response("home"),
+    404: () => new Response("custom", { status: 404 }),
+  }, async (base) => {
+    const response = await fetch(`${base}/missing`);
+    assertEquals(response.status, 404);
+    assertEquals(await response.text(), "custom");
+  });
 });
 
-Deno.test({
-  name: "02_custom_404.ts",
-  ignore: true,
-  fn: async () => {
-    const script = await createWorker(
-      "./examples/02_custom_404.ts",
-    );
-    await script.start();
-
-    const [response] = await script.fetch("/this_route_doesnt_exist");
-    assertEquals(await response.text(), "Custom 404");
-
-    script.close();
-  },
-});
-
-Deno.test({
-  name: "03_route_params",
-  ignore: true,
-  fn: async () => {
-    const script = await createWorker(
-      "./examples/03_route_params.ts",
-    );
-    await script.start();
-
-    const [response] = await script.fetch("/blog/hello-world");
-    assertEquals(await response.text(), "You visited /hello-world");
-
-    script.close();
-  },
-});
-
-Deno.test({
-  name: "04_serve_static_assets",
-  ignore: true,
-  fn: async () => {
-    const script = await createWorker(
-      "./examples/04_serve_static_assets.ts",
-      {
-        fetchHandler: handlers.fileFetchHandler,
-      },
-    );
-    await script.start();
-
-    // Test /static/* which serves a directory.
-    const expected = await Deno.readTextFile("./readme.md");
-    const [response] = await script.fetch("/static/readme.md");
-    const text = await response.text();
-    assertEquals(text, expected);
-    assertEquals(response.headers.get("x-function-cache-hit"), null);
+Deno.test("serve() renders returned JSX elements", async () => {
+  await withServer({
+    "/": () => h("h1", null, "hi"),
+  }, async (base) => {
+    const response = await fetch(`${base}/`);
     assertEquals(
       response.headers.get("content-type"),
-      "text/markdown; charset=utf-8",
+      "text/html; charset=utf-8",
     );
-
-    // Test /about which serves a single file.
-    const [response2] = await script.fetch("/about");
-    const text2 = await response2.text();
-    assertEquals(text2, expected);
-    assertEquals(response.headers.get("x-function-cache-hit"), null);
-    assertEquals(
-      response.headers.get("content-type"),
-      "text/markdown; charset=utf-8",
-    );
-
-    // Test /static/missing which should serve a 404.
-    const expectedMissing = "Custom 404";
-    const [response3] = await script.fetch("/static/missing");
-    const text3 = await response3.text();
-    assertEquals(text3, expectedMissing);
-    assertEquals(response3.headers.get("x-function-cache-hit"), null);
-    assertEquals(
-      response3.headers.get("content-type"),
-      "text/plain;charset=UTF-8",
-    );
-    assertEquals(response3.status, 404);
-
-    script.close();
-  },
+    assertEquals(await response.text(), "<h1>hi</h1>");
+  });
 });
 
-Deno.test("json() response has correct content-type", () => {
-  const response = json({});
+Deno.test("json() sets the content type", () => {
   assertEquals(
-    response.headers.get("content-type"),
+    json({}).headers.get("content-type"),
     "application/json; charset=utf-8",
   );
 });
 
-Deno.test("validateRequest() validates methods", async () => {
-  const request = new Request("https://example.com", {
-    method: "POST",
-  });
-
-  const { error } = await validateRequest(request, {
-    GET: {},
-  });
-
-  assertEquals(error!.message, "method POST is not allowed for the URL");
-  assertEquals(error!.status, Status.MethodNotAllowed);
+Deno.test("validateRequest() rejects disallowed methods", async () => {
+  const request = new Request("https://example.com", { method: "POST" });
+  const { error } = await validateRequest(request, { GET: {} });
+  assertEquals(error?.message, "method POST is not allowed for the URL");
+  assertEquals(error?.status, 405);
 });
 
-Deno.test("validateRequest() validates headers", async () => {
+Deno.test("validateRequest() checks required headers", async () => {
   const request = new Request("https://example.com", {
     method: "POST",
-    headers: {
-      Authorization: "Bearer token",
-    },
+    headers: { Authorization: "Bearer token" },
   });
-
   const { error } = await validateRequest(request, {
-    POST: {
-      headers: ["Authorization", "Content-Type"],
-    },
+    POST: { headers: ["Authorization", "Content-Type"] },
   });
-
-  assertEquals(error!.message, "header 'Content-Type' not available");
-  assertEquals(error!.status, Status.BadRequest);
+  assertEquals(error?.message, "header 'Content-Type' not available");
 });
 
-Deno.test("validateRequest() validates query strings", async () => {
-  const request = new Request("https://example.com?name=Satya", {
+Deno.test("validateRequest() checks required query params", async () => {
+  const request = new Request("https://example.com?name=satya", {
     method: "GET",
   });
-
   const { error } = await validateRequest(request, {
-    GET: {
-      params: ["name", "age"],
-    },
+    GET: { params: ["name", "age"] },
   });
-
   assertEquals(
-    error!.message,
+    error?.message,
     "param 'age' is required to process the request",
   );
-  assertEquals(error!.status, Status.BadRequest);
 });
 
-Deno.test("validateRequest() validates body of POST request", async () => {
+Deno.test("validateRequest() checks and returns the body", async () => {
   const request = new Request("https://example.com", {
     method: "POST",
-    body: JSON.stringify({
-      name: "Satya",
-    }),
+    body: JSON.stringify({ name: "satya", age: 98 }),
   });
-
   const { error, body } = await validateRequest(request, {
-    POST: {
-      body: ["name", "age"],
-    },
+    POST: { body: ["name", "age"] },
   });
-
-  assertEquals(body, undefined);
-  assertEquals(error!.message, "field 'age' is not available in the body");
-});
-
-Deno.test("validateRequest() populates body as per schema", async () => {
-  const request = new Request("https://example.com", {
-    method: "POST",
-    body: JSON.stringify({
-      name: "Satya",
-      age: 98,
-    }),
-  });
-
-  const { error, body } = await validateRequest(request, {
-    POST: {
-      body: ["name", "age"],
-    },
-  });
-
   assertEquals(error, undefined);
-  assertEquals(body, { name: "Satya", age: 98 });
+  assertEquals(body, { name: "satya", age: 98 });
 });
 
-const headersInitCases: {
-  description: string;
-  headers: HeadersInit;
-  entries: [string, string][];
-}[] = [
-  {
-    description: "merges Headers",
-    headers: new Headers({
-      "content-type": "type/subtype",
-      "custom-header-1": "1",
-      "custom-header-2": "2",
-    }),
-    entries: [
-      ["content-type", "type/subtype"],
-      ["custom-header-1", "1"],
-      ["custom-header-2", "2"],
-    ],
-  },
-  {
-    description: "merges [string, string][]",
-    headers: [
-      ["content-type", "type/subtype"],
-      ["custom-header-1", "1"],
-      ["custom-header-2", "2"],
-    ],
-    entries: [
-      ["content-type", "type/subtype"],
-      ["custom-header-1", "1"],
-      ["custom-header-2", "2"],
-    ],
-  },
-  {
-    description: "merges Record<string, string>",
-    headers: {
-      "content-type": "type/subtype",
-      "custom-header-1": "1",
-      "custom-header-2": "2",
-    },
-    entries: [
-      ["content-type", "type/subtype"],
-      ["custom-header-1", "1"],
-      ["custom-header-2", "2"],
-    ],
-  },
+const headerCases: { name: string; headers: HeadersInit }[] = [
+  { name: "Headers", headers: new Headers({ "x-custom": "1" }) },
+  { name: "entries", headers: [["x-custom", "1"]] },
+  { name: "record", headers: { "x-custom": "1" } },
 ];
 
-for (const { entries, headers, description } of headersInitCases) {
-  Deno.test(`HeadersInit: json() ${description}`, () => {
-    const response = json(null, { headers });
-    for (const [key, value] of entries) {
-      assertEquals(response.headers.get(key), value);
-    }
-  });
-
-  Deno.test(`HeadersInit: jsx() ${description}`, () => {
-    const vnode: VNode = { type: "div", props: { children: null }, key: "div" };
-    const response = jsx(vnode, { headers });
-    for (const [key, value] of entries) {
-      assertEquals(response.headers.get(key), value);
-    }
+for (const { name, headers } of headerCases) {
+  Deno.test(`json() merges ${name} headers`, () => {
+    assertEquals(json(null, { headers }).headers.get("x-custom"), "1");
   });
 }

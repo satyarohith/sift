@@ -1,123 +1,125 @@
 # Sift
 
-Sift is a routing and utility library for Deno and
-[Deno Deploy](https://deno.com/deploy).
+A small routing and utility library for building HTTP servers on Deno.
 
+[![JSR](https://jsr.io/badges/@satya/sift)](https://jsr.io/@satya/sift)
 ![ci](https://github.com/satyarohith/sift/actions/workflows/ci.yml/badge.svg)
-[![deno doc](https://doc.deno.land/badge.svg)](https://doc.deno.land/https/deno.land/x/sift@0.6.0/mod.ts)
 
-## Usage
-
-The documentation below briefly explains the common usage of the functions. You
-can visit [deno doc](https://doc.deno.land/https/deno.land/x/sift@0.6.0/mod.ts)
-site to learn more about the API.
+## Install
 
 ```sh
-deno run -A script.ts
+deno add jsr:@satya/sift
 ```
 
-### `serve()`
+Or import it directly:
 
-`serve()` is the routing function. It accepts an object literal with path
-strings as keys and their corresponding route handlers as values. The path
-string is processed using
-[URLPattern](https://developer.mozilla.org/en-US/docs/Web/API/URLPattern) and
-when the requested path matches the provided pattern, the corresponding handler
-is invoked.
+```ts
+import { serve } from "jsr:@satya/sift";
+```
 
-```js
-import { serve } from "https://deno.land/x/sift@0.6.0/mod.ts";
+## `serve()`
+
+`serve()` maps URL patterns to handlers and starts a server. Paths are matched
+with [URLPattern]; the matched groups are passed to the handler as the third
+argument. The `404` route handles requests that nothing else matches.
+
+```ts
+import { serve } from "@satya/sift";
 
 serve({
   "/": () => new Response("hello world"),
-  "/blog/:slug": (request, connInfo, params) => {
-    const post = `Hello, you visited ${params.slug}!`;
-    return new Response(post);
+  "/blog/:slug": (_request, _info, params) => {
+    return new Response(`you visited ${params?.slug}`);
   },
-  // The route handler of 404 will be invoked when a route handler
-  // for the requested path is not found.
-  404: () => new Response("not found"),
+  404: () => new Response("not found", { status: 404 }),
 });
 ```
 
-### `serveStatic()`
+A handler may return a `Response` or a JSX element. `serve()` returns the
+`Deno.HttpServer`, so you can `await server.shutdown()` when you're done.
 
-Serve static files relative to your source code.
+## `serveStatic()`
 
-> Note: Your project should have a git repository linked when using Deno Deploy.
+Serve files from disk, resolved relative to `baseUrl` (usually
+`import.meta.url`). To serve a directory, end the route with `:filename+`. Files
+under 10MB are cached in memory unless you pass `cache: false`.
 
-By default, up to 20 static assets that are less than 10MB are cached. You can
-disable caching by setting `cache: false` in the options object.
-
-If you're serving a directory, it is required that the path string end with
-`:filename+` as serveStatic uses this param to construct the absolute URL to the
-requested resource.
-
-```js
-import { serve, serveStatic } from "https://deno.land/x/sift@0.6.0/mod.ts";
+```ts
+import { serve, serveStatic } from "@satya/sift";
 
 serve({
-  // You can serve a single file.
+  // A single file.
   "/": serveStatic("public/index.html", { baseUrl: import.meta.url }),
-  // Or a directory of files.
-  "/:filename+": serveStatic("public", { baseUrl: import.meta.url }),
-  // You can modify the fetched response before returning to the request
-  // by using the intervene option.
+  // A directory of files.
+  "/assets/:filename+": serveStatic("public", { baseUrl: import.meta.url }),
+  // Modify the response before it's sent.
   "/style.css": serveStatic("style.css", {
     baseUrl: import.meta.url,
-    // The intervene function is called after the resource is
-    // fetched from the source URL. The original request and the
-    // fetched response are passed as arguments and a response
-    // is expected from the function.
-    intervene: (request, response) => {
-      // Do some processing to the response.
-      return response;
-    },
+    intervene: (_request, response) => response,
   }),
 });
 ```
 
-### `json()`
+## `json()`
 
-Converts an object literal to a JSON string and creates a `Response` instance
-with `application/json` as the `content-type`.
+Serialize a value to JSON and return it as an `application/json` response.
 
-```js
-import { json, serve } from "https://deno.land/x/sift@0.6.0/mod.ts";
+```ts
+import { json, serve } from "@satya/sift";
 
 serve({
   "/": () => json({ message: "hello world" }),
-  "api/create": () => json({ message: "created" }, { status: 201 }),
+  "/create": () => json({ message: "created" }, { status: 201 }),
 });
 ```
 
-### `jsx()`
+## `jsx()`
 
-Renders JSX components to HTML string and creates a `Response` instance with
-`text/html` as the `content-type`.
+Render a JSX element to HTML and return it as a `text/html` response. Configure
+the JSX runtime in your `deno.json`:
 
-When using this function, it is important that your file extension is `.jsx` or
-`.tsx` for Deno Deploy to transform you code and you've the `h` function
-imported.
+```json
+{
+  "compilerOptions": {
+    "jsx": "react-jsx",
+    "jsxImportSource": "preact"
+  }
+}
+```
 
-```jsx
-/** @jsx h */
-import { h, jsx, serve } from "https://deno.land/x/sift@0.6.0/mod.ts";
+```tsx
+import { jsx, serve } from "@satya/sift";
 
-const App = () => (
-  <div>
-    <h1>Hello world!</h1>
-  </div>
-);
-
-const NotFound = () => (
-  <div>
-    <h1>Page not found</h1>
-  </div>
-);
+const App = () => <h1>Hello world!</h1>;
 
 serve({
   "/": () => jsx(<App />),
-  404: () => jsx(<NotFound />, { status: 404 }),
+  404: () => jsx(<h1>Page not found</h1>, { status: 404 }),
 });
 ```
+
+## `validateRequest()`
+
+Check that a request uses an allowed method and includes the named headers,
+query params and body fields. The parsed body is returned so you don't have to
+read it again.
+
+```ts
+import { serve, validateRequest } from "@satya/sift";
+
+serve({
+  "/": async (request) => {
+    const { error, body } = await validateRequest(request, {
+      POST: { body: ["name"] },
+    });
+    if (error) return new Response(error.message, { status: error.status });
+    return new Response(`hello ${body?.name}`);
+  },
+});
+```
+
+## License
+
+[MIT](./LICENSE)
+
+[URLPattern]: https://developer.mozilla.org/en-US/docs/Web/API/URLPattern

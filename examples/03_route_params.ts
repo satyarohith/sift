@@ -1,9 +1,9 @@
 import { serve } from "../mod.ts";
 
 serve({
-  "/": (_request) => new Response("Hello World!"),
-  "/blog/:slug": (_request, _connInfo, params) => {
+  "/": () => new Response("Hello World!"),
+  "/blog/:slug": (_request, _info, params) => {
     return new Response(`You visited /${params?.slug}`);
   },
-  404: (_request) => new Response("Custom 404"),
+  404: () => new Response("Custom 404", { status: 404 }),
 });

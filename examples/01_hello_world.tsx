@@ -1,5 +1,4 @@
-/** @jsx h */
-import { h, jsx, serve } from "../mod.ts";
+import { jsx, serve } from "../mod.ts";
 
 const App = () => (
   <div>
